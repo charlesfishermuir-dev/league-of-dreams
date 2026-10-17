@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* League of Dreams broadcast palette, taken from the league logo. */
+@theme {
+  --color-ink: #070c1f;          /* page background */
+  --color-navy-900: #0d1638;
+  --color-navy-800: #15214f;
+  --color-navy-700: #1d2d6b;     /* logo navy */
+  --color-navy-600: #2a3d85;
+  --color-red: #e31937;          /* logo red */
+  --color-red-dark: #b0102a;
+  --color-gold: #f5c518;         /* trophies */
+  --color-chalk: #f4f6fb;        /* main text */
+  --color-mute: #9aa6c8;         /* secondary text */
+  --color-line: #24315f;         /* borders */
+
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-ink);
+  color: var(--color-chalk);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 50% -200px, rgba(29, 45, 107, 0.55), transparent 70%),
+    var(--color-ink);
+  min-height: 100dvh;
+}
+
+/* Stats line up in columns. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Wide stat tables scroll sideways inside their box, never the whole page. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}

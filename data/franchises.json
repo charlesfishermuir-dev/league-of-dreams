@@ -1,0 +1,33 @@
+{
+  "_help": "Every franchise (league seat) and who managed it in which years. The history import uses manager + year to place each team-season, so team-name spellings in the sheet don't matter. 'name' is the current/last team name. Add 'manager_aliases' for misspelled manager names.",
+  "manager_aliases": {
+    "Charlier Muir": "Charlie Muir",
+    "Andrew Behou": "Andrew Beghou"
+  },
+  "franchises": [
+    { "slug": "gizzle",      "name": "Tha B. Gizzle",          "active": true,  "managers": [{ "name": "Pat Jones",        "from": 2007 }] },
+    { "slug": "kame",        "name": "カメ",                    "active": true,  "managers": [{ "name": "Charlie Muir",     "from": 2008 }] },
+    { "slug": "hustlers",    "name": "Pure Hustlers",          "active": true,  "managers": [{ "name": "Kevin Porter",     "from": 2007 }] },
+    { "slug": "pineapples",  "name": "Wet Ass Pineapples",     "active": true,  "managers": [{ "name": "Thomas Nations",   "from": 2007 }] },
+    { "slug": "warblers",    "name": "Windy City Warblers",    "active": true,  "managers": [{ "name": "Casey Goldberg",   "from": 2007 }] },
+    { "slug": "mongers",     "name": "Younger Mongers",        "active": true,  "managers": [{ "name": "Gerik Zatorski",   "from": 2007 }] },
+    { "slug": "gorillas",    "name": "Sun Zoo Gorillas",       "active": true,  "managers": [{ "name": "Jack Knott",       "from": 2007, "to": 2022 }, { "name": "John Bottcher", "from": 2023 }] },
+    { "slug": "legends",     "name": "Winnetka Legends",       "active": true,  "managers": [{ "name": "Andrew Beghou",    "from": 2007 }] },
+    { "slug": "hitmen",      "name": "SouthSide Hitmen",       "active": true,  "managers": [{ "name": "Austin Hansen",    "from": 2010 }] },
+    { "slug": "steamers",    "name": "Fountain City Steamers", "active": true,  "managers": [{ "name": "Tyler Pritchard",  "from": 2014 }] },
+    { "slug": "dawgs",       "name": "Magic City Dawgs",       "active": true,  "managers": [{ "name": "Andrew Virciglio", "from": 2017 }] },
+    { "slug": "vulcans",     "name": "Birmingham Vulcans",     "active": true,  "managers": [{ "name": "Witt McLeod",      "from": 2020 }] },
+
+    { "slug": "canada",      "name": "Team Canada",            "active": false, "managers": [{ "name": "Nick Frid",        "from": 2007, "to": 2019 }] },
+    { "slug": "bandits",     "name": "Wet Bandits",            "active": false, "managers": [{ "name": "Jake Schiller",    "from": 2008, "to": 2019 }] },
+    { "slug": "mcpot",       "name": "McPot Mustache Club",    "active": false, "managers": [{ "name": "Clark Judge",      "from": 2007, "to": 2013 }] },
+    { "slug": "kegels",      "name": "Michael's Kegels",       "active": false, "managers": [{ "name": "Michael Schoder",  "from": 2016, "to": 2017 }] },
+    { "slug": "pine-tar",    "name": "Pine Tar Heroin",        "active": false, "managers": [{ "name": "Robert DeCoursey", "from": 2014, "to": 2016 }] },
+    { "slug": "clevelanders","name": "The Clevelanders",       "active": false, "managers": [{ "name": "Myron/Anter",      "from": 2014, "to": 2015 }] },
+    { "slug": "berman",      "name": "Team Berman",            "active": false, "managers": [{ "name": "Michael Berman",   "from": 2007, "to": 2007 }] },
+    { "slug": "schlitter",   "name": "Team Schlitter",         "active": false, "managers": [{ "name": "John Schlitter",   "from": 2007, "to": 2007 }] },
+    { "slug": "williamson",  "name": "Team Williamson",        "active": false, "managers": [{ "name": "Chris Williamson", "from": 2007, "to": 2007 }] },
+    { "slug": "stunat",      "name": "Team StuNat",            "active": false, "managers": [{ "name": "Stuart Nations",   "from": 2008, "to": 2008 }] },
+    { "slug": "ari-gold",    "name": "Ari Gold",               "active": false, "managers": [{ "name": "Graham Frank",     "from": 2009, "to": 2009 }] }
+  ]
+}

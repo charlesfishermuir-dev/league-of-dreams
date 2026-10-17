@@ -1,0 +1,20 @@
+"""Shared helpers for the Python scripts: settings from .env and the database URL."""
+import os
+import pathlib
+import sys
+
+from dotenv import load_dotenv
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+load_dotenv(ROOT / ".env")
+
+
+def setting(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        sys.exit(f"Missing {name}. Add it to .env (local) or the GitHub Actions secrets.")
+    return value
+
+
+def db_url() -> str:
+    return setting("SUPABASE_DB_URL")
