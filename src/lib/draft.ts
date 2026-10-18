@@ -26,7 +26,7 @@ export const loadDrafts = cache(async () => {
   const [drafts, order, lotteries, odds] = await Promise.all([
     rows<Omit<Draft, "order">>(supabase.from("drafts").select("*").order("year", { ascending: false }), "drafts"),
     rows<DraftOrderRow>(supabase.from("draft_order").select("*").order("slot"), "draft order"),
-    rows<LotteryRecord>(supabase.from("draft_lotteries").select("*"), "lotteries"),
+    rows<LotteryRecord>(supabase.from("draft_lotteries").select("year, run_at, entrants, draws"), "lotteries"),
     rows<{ seed: number; balls: number | null }>(supabase.from("lottery_odds").select("*").order("seed"), "lottery odds"),
   ]);
   return {
@@ -39,7 +39,7 @@ export const loadDrafts = cache(async () => {
 export type LotterySchedule = { year: number; run_at: string; status: "scheduled" | "done"; last_error: string | null };
 
 export async function loadLotterySchedule(year: number): Promise<LotterySchedule | null> {
-  const { data } = await supabase.from("lottery_schedule").select("*").eq("year", year).maybeSingle();
+  const { data } = await supabase.from("lottery_schedule").select("year, run_at, status, last_error").eq("year", year).maybeSingle();
   return (data as LotterySchedule) ?? null;
 }
 

@@ -21,14 +21,14 @@ export const NEWS_KINDS: Record<NewsKind, string> = {
 
 /** Published posts, newest first (visitors only ever see published ones). */
 export async function loadNews(limit = 50): Promise<NewsPost[]> {
-  const { data, error } = await supabase.from("news").select("*").eq("published", true)
+  const { data, error } = await supabase.from("news").select("id, slug, kind, title, body, published, published_at, updated_at").eq("published", true)
     .order("published_at", { ascending: false }).limit(limit);
   if (error) throw new Error(`Loading news: ${error.message}`);
   return (data ?? []) as NewsPost[];
 }
 
 export async function loadPost(slug: string): Promise<NewsPost | null> {
-  const { data } = await supabase.from("news").select("*").eq("slug", slug).eq("published", true).maybeSingle();
+  const { data } = await supabase.from("news").select("id, slug, kind, title, body, published, published_at, updated_at").eq("slug", slug).eq("published", true).maybeSingle();
   return (data as NewsPost) ?? null;
 }
 
