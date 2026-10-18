@@ -54,7 +54,7 @@ export default async function Home() {
               <h2 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">{period?.label ?? "Scoreboard"}</h2>
             </div>
           </div>
-          <UpdatedLine status={cur.sync.get("matchups")} />
+          <UpdatedLine status={cur.sync.get("matchups")} live={isLive} />
         </div>
         {games.length === 0 ? (
           <Card className="p-5 text-center text-mute">No matchups this week.</Card>

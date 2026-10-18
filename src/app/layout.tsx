@@ -7,9 +7,15 @@ import "./globals.css";
 const oswald = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-oswald" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: "League of Dreams", template: "%s · League of Dreams" },
-  description: "The home of the League of Dreams fantasy baseball league, est. 2007.",
+  description: "Live scores, standings and 20 years of history for the League of Dreams fantasy baseball league, est. 2007.",
+  openGraph: { siteName: "League of Dreams", type: "website" },
+  appleWebApp: { title: "LOD", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = { themeColor: "#070c1f" };

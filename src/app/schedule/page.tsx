@@ -65,7 +65,7 @@ export default async function SchedulePage({ searchParams }: Props) {
           ))}
         </div>
       )}
-      <div className="mt-3"><UpdatedLine status={sync.get("matchups")} /></div>
+      <div className="mt-3"><UpdatedLine status={sync.get("matchups")} live={games.some((m) => m.status === "live")} /></div>
       <p className="mt-6 text-sm text-mute">
         Looking for an older season? Every year&apos;s standings and playoffs are in{" "}
         <Link href="/history" className="text-red hover:underline">League History</Link>.

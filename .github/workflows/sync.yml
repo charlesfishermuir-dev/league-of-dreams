@@ -1,0 +1,41 @@
+# Pulls Fantrax data into the database on a schedule.
+# Times are UTC (Central time + 5 hours in summer, + 6 in winter).
+name: Fantrax sync
+
+on:
+  schedule:
+    - cron: "*/5 16-23 * 3-10 *"   # every 5 min, ~11am–7pm CT, March–October (game time)
+    - cron: "*/5 0-5 * 3-11 *"     # every 5 min, ~7pm–midnight CT
+    - cron: "17 * * * *"           # hourly the rest of the time (trades, roster moves)
+  workflow_dispatch:                # "Run workflow" button on GitHub for a manual sync
+    inputs:
+      backfill:
+        description: "Also re-import every past Fantrax season"
+        type: boolean
+        default: false
+
+# Never run two syncs at once; a newer run waits for the current one.
+concurrency:
+  group: fantrax-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Sync
+        env:
+          FANTRAX_COOKIE: ${{ secrets.FANTRAX_COOKIE }}
+          FANTRAX_LEAGUE_ID: ${{ secrets.FANTRAX_LEAGUE_ID }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python scripts/sync_fantrax.py ${{ inputs.backfill && '--backfill' || '' }}

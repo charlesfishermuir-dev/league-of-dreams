@@ -35,9 +35,14 @@ export function StatusChip({ status }: { status: Matchup["status"] }) {
   );
 }
 
-/** "Updated 3 min ago", with a warning when the last sync failed. */
-export function UpdatedLine({ status, label = "Updated" }: { status?: SyncStatus; label?: string }) {
+/**
+ * "Updated 3 min ago", with a warning when the last sync failed, or when games
+ * are live but the scores haven't refreshed in a while (e.g. the scheduler stopped).
+ */
+export function UpdatedLine({ status, label = "Updated", live = false }: { status?: SyncStatus; label?: string; live?: boolean }) {
   if (!status) return <p className="text-xs text-mute">Not synced from Fantrax yet.</p>;
+  const minutesOld = status.last_success ? (Date.now() - new Date(status.last_success).getTime()) / 60000 : Infinity;
+  const stale = live && status.ok !== false && minutesOld > 30;
   return (
     <p className="text-xs text-mute">
       {label} {fmtUpdated(status.last_success)}
@@ -45,6 +50,9 @@ export function UpdatedLine({ status, label = "Updated" }: { status?: SyncStatus
         <span className="ml-2 rounded bg-red/20 px-1.5 py-0.5 text-red" title={status.message ?? ""}>
           ⚠ Fantrax sync is failing — showing the last good data
         </span>
+      )}
+      {stale && (
+        <span className="ml-2 rounded bg-gold/20 px-1.5 py-0.5 text-gold">⚠ Live scores may be behind</span>
       )}
     </p>
   );
