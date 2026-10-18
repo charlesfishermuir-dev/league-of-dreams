@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
   const tokenHash = url.searchParams.get("token_hash");
   const code = url.searchParams.get("code");
 
+  // Supabase's standard email link puts the login after a "#", which only the browser can read.
+  // The browser keeps that part through this redirect, and /auth/confirm finishes the sign-in.
+  if (!tokenHash && !code) return NextResponse.redirect(new URL("/auth/confirm", url.origin));
+
   let ok = false;
   if (tokenHash) {
     const type = (url.searchParams.get("type") ?? "email") as EmailOtpType;

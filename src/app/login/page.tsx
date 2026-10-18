@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Card, PageTitle } from "@/components/ui";
-import { supabaseForUser } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 
 export const metadata: Metadata = { title: "Commissioner sign-in", robots: { index: false } };
 
@@ -17,7 +17,11 @@ async function sendLink(formData: FormData) {
   "use server";
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const origin = (await headers()).get("origin") ?? "http://localhost:3000";
-  const supabase = await supabaseForUser();
+  // "Implicit" links carry the login with them, so they work in any browser (e.g. a phone's mail
+  // app), not only the one that asked for the email. /auth/confirm finishes the sign-in.
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
   const { error } = await supabase.auth.signInWithOtp({
     email,
     // Only existing accounts can sign in; nobody can create one from this form.
