@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/news", label: "News" },
   { href: "/admin/rules", label: "Rules" },
   { href: "/admin/awards", label: "Awards" },
+  { href: "/admin/lottery", label: "Draft lottery" },
   { href: "/admin/corrections", label: "Corrections" },
 ];
 

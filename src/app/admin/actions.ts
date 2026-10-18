@@ -174,3 +174,66 @@ export async function deleteCorrection(formData: FormData) {
   refreshSite();
   redirect(`/admin/corrections?year=${o.year}&deleted=1`);
 }
+
+// ---------- draft lottery ----------
+
+export async function saveLotteryOdds(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const updates: { seed: number; balls: number | null }[] = [];
+  for (let seed = 1; seed <= 8; seed++) {
+    const raw = text(formData, `seed${seed}`);
+    const balls = raw === "" ? null : Number(raw);
+    if (balls !== null && !(balls > 0)) fail("/admin/lottery", `Seed ${seed}: use a number above 0, or leave it blank.`);
+    updates.push({ seed, balls });
+  }
+  for (const u of updates) {
+    const { error } = await supabase.from("lottery_odds").update({ balls: u.balls }).eq("seed", u.seed);
+    if (error) fail("/admin/lottery", error.message);
+  }
+  refreshSite();
+  redirect("/admin/lottery?saved=1");
+}
+
+export async function runLottery(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const { randomInt } = await import("node:crypto");
+  const { loadHistory } = await import("@/lib/history");
+  const { upcomingLottery, playoffSlots, pickProbabilities } = await import("@/lib/draft");
+
+  const { data: odds } = await supabase.from("lottery_odds").select("*").order("seed");
+  const h = await loadHistory();
+  const up = upcomingLottery(h, (odds ?? []).map((o) => ({ seed: o.seed, balls: o.balls === null ? null : Number(o.balls) })));
+  if (text(formData, "confirm") !== String(up.draftYear)) fail("/admin/lottery", `Type ${up.draftYear} in the box to confirm.`);
+  if (!up.complete) fail("/admin/lottery", `The ${up.basedOn} season isn't finished yet, so the lottery teams aren't final.`);
+  if (!up.oddsSet) fail("/admin/lottery", "Fill in the odds for all 8 seeds first.");
+  if (up.entrants.length !== 8) fail("/admin/lottery", `Expected 8 lottery teams, found ${up.entrants.length}.`);
+  const playoff = playoffSlots(h, up.basedOn);
+  if (playoff.length !== 4) fail("/admin/lottery", `Expected 4 playoff teams in ${up.basedOn}, found ${playoff.length}.`);
+
+  // The draw: one pick at a time, each team's chance proportional to its balls.
+  // Odds are scaled to whole numbers so the random roll is exact; the rolls are saved for anyone to check.
+  const first = pickProbabilities(up.entrants.map((e) => e.balls!)).map((p) => p[0]);
+  let pool = up.entrants.map((e) => ({ ...e, weight: Math.round(e.balls! * 1000) }));
+  const draws: { pick: number; roll: number; out_of: number; franchise_id: number }[] = [];
+  for (let pick = 1; pick <= 8; pick++) {
+    const outOf = pool.reduce((s, e) => s + e.weight, 0);
+    const roll = randomInt(outOf);
+    let acc = 0;
+    const winner = pool.find((e) => (acc += e.weight) > roll)!;
+    draws.push({ pick, roll, out_of: outOf, franchise_id: winner.ts.franchise_id });
+    pool = pool.filter((e) => e !== winner);
+  }
+
+  const order = [
+    ...draws.map((d) => ({ slot: d.pick, franchise_id: d.franchise_id, how: "lottery",
+                           seed: up.entrants.find((e) => e.ts.franchise_id === d.franchise_id)!.seed })),
+    ...playoff.map((ts, i) => ({ slot: 9 + i, franchise_id: ts.franchise_id, how: "playoffs", seed: null })),
+  ];
+  const entrants = up.entrants.map((e, i) => ({ seed: e.seed, franchise_id: e.ts.franchise_id, team_name: e.ts.team_name,
+                                                balls: e.balls, chance_first: first[i] }));
+  const { error } = await supabase.rpc("record_lottery", {
+    p_year: up.draftYear, p_based_on: up.basedOn, p_order: order, p_entrants: entrants, p_draws: draws });
+  if (error) fail("/admin/lottery", error.message);
+  refreshSite();
+  redirect(`/draft/${up.draftYear}?reveal=1`);
+}

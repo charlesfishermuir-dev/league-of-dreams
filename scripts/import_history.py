@@ -21,6 +21,7 @@ import psycopg
 import requests
 from psycopg.types.json import Jsonb
 
+import drafts
 from common import ROOT, db_url
 
 SHEET_ID = "1rdgP-sAPzYIz41buy1cPH8EASMLzChwXeqG_2WKMgvo"
@@ -373,7 +374,16 @@ def main() -> int:
         print("Check only — database not changed.")
         return 0
     write(team_seasons, by_year, matchups, seeds, fr)
-    print("Imported into the database.")
+    # Drafts are matched against the standings just written, so they go second.
+    draft_rep = Report()
+    with psycopg.connect(db_url()) as conn, conn.transaction():
+        parsed = drafts.parse(conn, draft_rep)
+        drafts.write(conn, parsed, draft_rep)
+    for n in draft_rep.notes:
+        print(f"  note: {n}")
+    for p in draft_rep.problems:
+        print(f"  PROBLEM: {p}")
+    print(f"Imported into the database (including {len(parsed)} drafts).")
     return 0
 
 

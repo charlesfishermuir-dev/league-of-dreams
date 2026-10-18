@@ -1,0 +1,23 @@
+{
+  "_help": "Abbreviations used in the 'Origin' column of the draft tabs, mapped to franchise slugs (see franchises.json). 'team_aliases' maps team names that appear in the draft tabs but not in the season standings.",
+  "abbreviations": {
+    "PH": "hustlers", "PURE": "hustlers",
+    "TBG": "gizzle", "BG": "gizzle", "GIZZ": "gizzle",
+    "カメ": "kame", "BT": "kame", "HOLY": "kame",
+    "BAG": "pineapples",
+    "WCW": "warblers",
+    "FCM": "mongers", "MONG": "mongers",
+    "SZG": "gorillas", "TC": "gorillas",
+    "WL": "legends", "WP": "legends", "SOSA": "legends",
+    "SSH": "hitmen", "SH": "hitmen", "SSHM": "hitmen",
+    "FCS": "steamers", "CR": "steamers", "RIOT": "steamers",
+    "MCD": "dawgs", "SD": "dawgs", "STAV": "dawgs", "DAWG": "dawgs",
+    "BV": "vulcans", "ICW": "vulcans", "WITT": "vulcans", "RSBT": "vulcans"
+  },
+  "team_aliases": {
+    "Wet Ass Grasshoppers": "pineapples",
+    "Wet Ass Pineapples": "pineapples",
+    "South Side Hitmen": "hitmen",
+    "Southside Hitmen": "hitmen"
+  }
+}
