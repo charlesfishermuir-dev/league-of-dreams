@@ -25,6 +25,9 @@ export default async function DraftYearPage({ params, searchParams }: Props) {
   const slug = (id: number) => h.franchiseById.get(id)!.slug;
   const manager = (id: number) => h.teamSeason.get(`${draft.based_on}:${id}`)?.manager_label ?? "";
   const years = drafts.map((d) => d.year).sort();
+  // A draft run on the site whose picks haven't all been made: the board shows who holds each pick.
+  const upcoming = draft.source === "site" && picks.some((p) => !p.player);
+  const traded = picks.filter((p) => p.franchise_id && p.origin_franchise_id && p.franchise_id !== p.origin_franchise_id);
   const prev = years[years.indexOf(year) - 1];
   const next = years[years.indexOf(year) + 1];
 
@@ -87,7 +90,12 @@ export default async function DraftYearPage({ params, searchParams }: Props) {
 
       {picks.length > 0 && (
         <>
-          <SectionTitle kicker="Every pick">Draft board</SectionTitle>
+          <SectionTitle kicker={upcoming ? `Every pick · ${traded.length} traded` : "Every pick"}>{upcoming ? "Full draft order" : "Draft board"}</SectionTitle>
+          {upcoming && (
+            <p className="-mt-2 mb-3 text-sm text-mute">
+              Who holds each pick right now, updated from Fantrax as trades happen. <span className="text-gold">Via</span> shows the team the pick originally belonged to.
+            </p>
+          )}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: ROUNDS }, (_, r) => (
               <Card key={r}>
@@ -95,16 +103,27 @@ export default async function DraftYearPage({ params, searchParams }: Props) {
                 <ol className="divide-y divide-line/60 text-sm">
                   {picks.filter((p) => p.round === r + 1).map((p) => {
                     const traded = p.franchise_id && p.origin_franchise_id && p.franchise_id !== p.origin_franchise_id;
+                    const via = traded && <span className="text-gold">via {name(p.origin_franchise_id)}</span>;
                     return (
                       <li key={p.pick} className="flex items-baseline gap-2 px-4 py-1.5">
                         <span className="w-6 shrink-0 text-right text-xs text-mute num">{p.pick}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className={`block truncate ${p.player ? "font-medium" : "italic text-mute"}`}>{p.player ?? "Forfeited"}</span>
-                          <span className="block truncate text-xs text-mute">
-                            {name(p.franchise_id)}
-                            {traded && <span className="text-gold"> · via {name(p.origin_franchise_id)}</span>}
+                        {upcoming && !p.player ? (
+                          // Not drafted yet: who holds the pick, and whose pick it was originally.
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">
+                              {p.franchise_id ? <TeamLink slug={slug(p.franchise_id)}>{name(p.franchise_id)}</TeamLink> : "—"}
+                            </span>
+                            <span className="block truncate text-xs text-mute">{via || "Own pick"}</span>
                           </span>
-                        </span>
+                        ) : (
+                          <span className="min-w-0 flex-1">
+                            <span className={`block truncate ${p.player ? "font-medium" : "italic text-mute"}`}>{p.player ?? "Forfeited"}</span>
+                            <span className="block truncate text-xs text-mute">
+                              {name(p.franchise_id)}
+                              {via && <> · {via}</>}
+                            </span>
+                          </span>
+                        )}
                       </li>
                     );
                   })}
@@ -112,6 +131,33 @@ export default async function DraftYearPage({ params, searchParams }: Props) {
               </Card>
             ))}
           </div>
+        </>
+      )}
+
+      {upcoming && (
+        <>
+          <SectionTitle kicker="Who holds what">Picks by team</SectionTitle>
+          <Card>
+            <ul className="divide-y divide-line text-sm">
+              {[...new Set(picks.map((p) => p.franchise_id!))]
+                .map((id) => ({ id, mine: picks.filter((p) => p.franchise_id === id) }))
+                .sort((a, b) => b.mine.length - a.mine.length || a.mine[0].pick - b.mine[0].pick)
+                .map(({ id, mine }) => (
+                  <li key={id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2">
+                    <span className="min-w-0 flex-1 truncate font-medium"><TeamLink slug={slug(id)}>{name(id)}</TeamLink></span>
+                    <span className="text-xs text-mute num">
+                      {mine.length} {mine.length === 1 ? "pick" : "picks"}:{" "}
+                      {mine.map((p, i) => (
+                        <span key={p.pick} className={p.origin_franchise_id !== id ? "text-gold" : ""}>
+                          {i > 0 && ", "}#{p.pick}
+                        </span>
+                      ))}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </Card>
+          <p className="mt-2 text-xs text-mute">Picks in <span className="text-gold">gold</span> came by trade.</p>
         </>
       )}
 

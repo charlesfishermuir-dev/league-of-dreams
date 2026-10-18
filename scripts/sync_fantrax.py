@@ -376,6 +376,34 @@ class Sync:
             page += 1
         return f"{added} new trade rows"
 
+    def draft_picks(self, league_id: str):
+        """Who owns each pick of the next draft (after trades). Needs that draft's order, i.e. the lottery has run."""
+        data = self.fx.call("getDraftPicks", league_id=league_id)
+        draft_year = int(need(data, "seasonYear"))
+        slots = dict(self.conn.execute("select franchise_id, slot from draft_order where year = %s", (draft_year,)).fetchall())
+        if not slots:
+            return f"{draft_year} draft order not set yet (the lottery hasn't run)"
+        team_fid = dict(self.conn.execute("select team_id, franchise_id from fantrax_teams where league_id = %s", (league_id,)).fetchall())
+        batch = []
+        for p in need(data, "draftPicks"):
+            owner, original = team_fid.get(need(p, "teamId")), team_fid.get(need(p, "originalTeamId"))
+            if owner is None or original not in slots:
+                raise FantraxFormatError(f"Draft pick {p} belongs to a team we don't know")
+            rnd, slot = int(need(p, "round")), slots[original]
+            batch.append((draft_year, (rnd - 1) * 12 + slot, rnd, slot, owner, original))
+        if len(batch) != 60:
+            raise FantraxFormatError(f"Expected 60 draft picks for {draft_year}, Fantrax listed {len(batch)}")
+        with self.conn.cursor() as cur:
+            # Once a pick has been made (player filled in), it's left alone.
+            cur.executemany(
+                """insert into draft_picks (year, pick, round, slot, franchise_id, origin_franchise_id)
+                   values (%s, %s, %s, %s, %s, %s)
+                   on conflict (year, pick) do update set franchise_id = excluded.franchise_id,
+                       origin_franchise_id = excluded.origin_franchise_id
+                   where draft_picks.player is null""", batch)
+        traded = sum(1 for b in batch if b[4] != b[5])
+        return f"{draft_year} draft: 60 picks, {traded} traded"
+
     def rosters(self, year: int, league_id: str):
         positions = {k: v["shortName"] for k, v in need(self.fx.league_info(), "positionMap").items()}
         teams = self.conn.execute("select team_id, franchise_id from fantrax_teams where league_id = %s", (league_id,)).fetchall()
@@ -467,7 +495,7 @@ def main() -> int:
             info = fx.league_info()
             history = need(fx.history(), "seasons")
         except FantraxError as e:
-            for d in ("matchups", "rosters", "transactions", "trades"):
+            for d in ("matchups", "rosters", "transactions", "trades", "draft_picks"):
                 sync._status(d, datetime.now().astimezone(), False, str(e)[:500])
             print(f"✗ Fantrax unavailable: {e}")
             return 1
@@ -485,6 +513,7 @@ def main() -> int:
             sync.run("rosters", sync.rosters, year, fx.league_id)
             sync.run("transactions", sync.transactions, year, fx.league_id, args.backfill)
             sync.run("trades", sync.trades, year, fx.league_id)
+            sync.run("draft_picks", sync.draft_picks, fx.league_id)
         else:
             print(f"  (replay mode: showing week {args.replay_week} as live; rosters and transactions left alone)")
     return 1 if sync.failed else 0
