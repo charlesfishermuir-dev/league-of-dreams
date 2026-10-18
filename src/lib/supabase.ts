@@ -5,7 +5,12 @@ import { createClient } from "@supabase/supabase-js";
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  { auth: { persistSession: false } },
+  {
+    auth: { persistSession: false },
+    // Next.js caches fetches; keep database reads at most a minute old so
+    // live scores and newly synced seasons show up.
+    global: { fetch: (input, init) => fetch(input, { ...init, next: { revalidate: 60 } }) },
+  },
 );
 
 /** Fetch every row of a table, paging past Supabase's 1,000-row response cap. */

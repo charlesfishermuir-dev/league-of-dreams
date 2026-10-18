@@ -1,22 +1,20 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Card, PageTitle, SectionTitle } from "@/components/ui";
-import { fmtPct, fmtRecord, loadHistory, winPct, type History } from "@/lib/history";
+import { Card, Note2020, PageTitle, SectionTitle } from "@/components/ui";
+import { allTimeRecord, fmtPct, fmtRecord, loadHistory, type History } from "@/lib/history";
 
 export const metadata: Metadata = { title: "Teams" };
 export const revalidate = 300;
 
 function franchiseSummary(h: History, franchiseId: number) {
   const seasons = h.teamSeasons.filter((t) => t.franchise_id === franchiseId).sort((a, b) => a.year - b.year);
-  const w = seasons.reduce((s, t) => s + t.wins, 0);
-  const l = seasons.reduce((s, t) => s + t.losses, 0);
-  const t = seasons.reduce((s, x) => s + x.ties, 0);
+  const r = allTimeRecord(seasons);
   return {
     latest: seasons.at(-1),
     first: seasons[0]?.year,
     count: seasons.length,
-    record: fmtRecord(w, l, t),
-    pct: winPct(w, l, t),
+    record: fmtRecord(r.w, r.l, r.t),
+    pct: r.pct,
     rings: seasons.filter((x) => x.finish === "champion").length,
   };
 }
@@ -53,6 +51,8 @@ export default async function TeamsPage() {
             </Link>
           ))}
       </div>
+
+      <Note2020>All-time records count 2020 as one normal season.</Note2020>
 
       <SectionTitle kicker="Gone but not forgotten">Former franchises</SectionTitle>
       <Card>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Card, PageTitle, SectionTitle, Tabs, TeamLink, td, th } from "@/components/ui";
+import { Card, Note2020, PageTitle, SectionTitle, Tabs, TeamLink, td, th } from "@/components/ui";
 import {
-  COUNTING, fmtPct, fmtRecord, fmtStat, headToHead, INF_SPOT_YEAR, loadHistory, LOWER_IS_BETTER,
+  fmtPct, fmtRecord, fmtStat, headToHead, inSeasonRecords, INF_SPOT_YEAR, loadHistory, LOWER_IS_BETTER,
   managerTotals, ordinal, SHORT_SEASON, winPct, type TeamSeason,
 } from "@/lib/history";
 
@@ -31,7 +31,7 @@ export default async function RecordsPage({ searchParams }: Props) {
 
   // ---- category leaderboards ----
   const pool = h.teamSeasons.filter(
-    (t) => ERAS[era].test(t.year) && t.stats[cat] !== undefined && !(COUNTING.has(cat) && t.year === SHORT_SEASON),
+    (t) => ERAS[era].test(t.year) && t.stats[cat] !== undefined && inSeasonRecords(t),
   );
   const lowBetter = LOWER_IS_BETTER.has(cat);
   const sorted = [...pool].sort((a, b) => (lowBetter ? a.stats[cat] - b.stats[cat] : b.stats[cat] - a.stats[cat]));
@@ -39,7 +39,7 @@ export default async function RecordsPage({ searchParams }: Props) {
   const worst = sorted.slice(-10).reverse();
 
   // ---- best / worst seasons by win % ----
-  const byPct = [...h.teamSeasons].sort((a, b) => winPct(b.wins, b.losses, b.ties) - winPct(a.wins, a.losses, a.ties));
+  const byPct = h.teamSeasons.filter(inSeasonRecords).sort((a, b) => winPct(b.wins, b.losses, b.ties) - winPct(a.wins, a.losses, a.ties));
 
   // ---- playoff dominance ----
   const playoff = h.matchups.filter((m) => m.stage !== "regular");
@@ -63,17 +63,17 @@ export default async function RecordsPage({ searchParams }: Props) {
         <Leaderboard title={`Best ${cat} seasons`} rows={best} cat={cat} slug={slug} />
         <Leaderboard title={`Worst ${cat} seasons`} rows={worst} cat={cat} slug={slug} startRank={sorted.length - 9} reverse />
       </div>
-      <p className="mt-2 text-xs text-mute">
-        {COUNTING.has(cat) ? `${SHORT_SEASON} (60-game season) left out of counting stats. ` : ""}
-        {cat === "OPS" ? "OPS was added in 2012. " : ""}
+      <Note2020>
+        {SHORT_SEASON} is left out of single-season records. {cat === "OPS" ? "OPS was added in 2012. " : ""}
         The INF roster spot was added in {INF_SPOT_YEAR}, which inflated hitting numbers.
-      </p>
+      </Note2020>
 
       <SectionTitle kicker="Regular season">Best &amp; worst records</SectionTitle>
       <div className="grid gap-4 md:grid-cols-2">
         <RecordList title="Best seasons" rows={byPct.slice(0, 10)} slug={slug} />
         <RecordList title="Worst seasons" rows={byPct.slice(-10).reverse()} slug={slug} />
       </div>
+      <Note2020>{SHORT_SEASON} is left out of best and worst seasons.</Note2020>
 
       <SectionTitle kicker="Playoffs">Most lopsided playoff matchups</SectionTitle>
       <Card>
@@ -133,7 +133,7 @@ export default async function RecordsPage({ searchParams }: Props) {
         </table>
       </Card>
       <p className="mt-2 text-xs text-mute">
-        Playoff meetings only for now. Every regular-season matchup since 2018 is added from Fantrax in Stage 2.
+        Every regular-season meeting since 2019 plus every playoff meeting since 2007. 2020&apos;s all-play weeks are left out.
       </p>
     </>
   );
@@ -172,7 +172,7 @@ function RecordList({ title, rows, slug }: { title: string; rows: TeamSeason[]; 
             <span className="min-w-0 flex-1">
               <span className="block truncate"><TeamLink slug={slug(t.franchise_id)}>{t.team_name}</TeamLink></span>
               <span className="block truncate text-xs text-mute">
-                {t.year}{t.year === SHORT_SEASON ? "*" : ""} · {t.manager_label} · {ordinal(t.place)}
+                {t.year} · {t.manager_label} · {ordinal(t.place)}
               </span>
             </span>
             <span className="text-right">

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Card, FinishBadge, PageTitle, SectionTitle, TeamLink, td, th } from "@/components/ui";
+import { Card, FinishBadge, How2020Counts, PageTitle, SectionTitle, TeamLink, td, th } from "@/components/ui";
 import {
-  fmtPct, fmtRecord, fmtStat, loadHistory, STAGE_LABEL, winPct,
+  fmtPct, fmtRecord, fmtStat, loadHistory, SHORT_SEASON, STAGE_LABEL, winPct,
   type History, type Matchup,
 } from "@/lib/history";
 
@@ -39,6 +39,12 @@ export default async function SeasonPage({ params }: Props) {
       <PageTitle kicker={season.league_name ?? undefined} sub={season.notes}>
         {year} Season
       </PageTitle>
+
+      {year === SHORT_SEASON && (
+        <div className="mb-8">
+          <How2020Counts />
+        </div>
+      )}
 
       {champ && (
         <Card className="relative mb-8 overflow-hidden p-5 pl-6">

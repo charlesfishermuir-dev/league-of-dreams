@@ -18,3 +18,10 @@ def setting(name: str) -> str:
 
 def db_url() -> str:
     return setting("SUPABASE_DB_URL")
+
+
+def db_connect():
+    """Connect to the database, giving up quickly if the network is down or stalls."""
+    import psycopg
+    return psycopg.connect(db_url(), connect_timeout=15, keepalives=1, keepalives_idle=20,
+                           keepalives_interval=5, keepalives_count=3)

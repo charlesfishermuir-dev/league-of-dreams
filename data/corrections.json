@@ -1,0 +1,405 @@
+{
+ "_help": "Fixes applied to the Google Sheet's data every time scripts/import_history.py runs. Each fix only applies while the sheet still has the 'sheet' value; once you fix the sheet itself, the import says so and the entry can be deleted. Fields: wins, losses, ties, team_name, stats.<CATEGORY>.",
+ "corrections": [
+  {
+   "year": 2009,
+   "manager": "Andrew Beghou",
+   "field": "wins",
+   "sheet": 137,
+   "correct": 131,
+   "reason": "137-118-27 adds up to 282 category matchups; every other 2009 team has 276, and league wins (1548) didn't equal losses (1542). 131 is the only value that fixes both. Not verifiable from Fantrax (2009 was on ESPN)."
+  },
+  {
+   "year": 2023,
+   "manager": "Thomas Nations",
+   "field": "ties",
+   "sheet": 19,
+   "correct": 9,
+   "reason": "129-126-19 adds up to 274; everyone else has 264. Fantrax shows 129-126-9."
+  },
+  {
+   "year": 2008,
+   "manager": "Casey Goldberg",
+   "field": "team_name",
+   "sheet": "Windy City Warlbers",
+   "correct": "Windy City Warblers",
+   "reason": "Spelling."
+  },
+  {
+   "year": 2020,
+   "manager": "Thomas Nations",
+   "field": "stats.R",
+   "sheet": 407,
+   "correct": 403,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Thomas Nations",
+   "field": "stats.HR",
+   "sheet": 123,
+   "correct": 121,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Thomas Nations",
+   "field": "stats.RBI",
+   "sheet": 400,
+   "correct": 391,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Charlie Muir",
+   "field": "stats.R",
+   "sheet": 345,
+   "correct": 336,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Charlie Muir",
+   "field": "stats.HR",
+   "sheet": 95,
+   "correct": 93,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Charlie Muir",
+   "field": "stats.RBI",
+   "sheet": 314,
+   "correct": 311,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Charlie Muir",
+   "field": "stats.OPS",
+   "sheet": 0.796,
+   "correct": 0.791,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Witt McLeod",
+   "field": "stats.R",
+   "sheet": 272,
+   "correct": 266,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Witt McLeod",
+   "field": "stats.HR",
+   "sheet": 74,
+   "correct": 73,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2020,
+   "manager": "Witt McLeod",
+   "field": "stats.RBI",
+   "sheet": 262,
+   "correct": 259,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.R",
+   "sheet": 920,
+   "correct": 872,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.HR",
+   "sheet": 274,
+   "correct": 262,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.RBI",
+   "sheet": 857,
+   "correct": 823,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.SB",
+   "sheet": 72,
+   "correct": 71,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.OPS",
+   "sheet": 0.809,
+   "correct": 0.804,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.ERA",
+   "sheet": 3.71,
+   "correct": 3.59,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.WHIP",
+   "sheet": 1.146,
+   "correct": 1.136,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.K",
+   "sheet": 1505,
+   "correct": 1457,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.W",
+   "sheet": 82,
+   "correct": 80,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.L",
+   "sheet": 75,
+   "correct": 71,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2021,
+   "manager": "Jack Knott",
+   "field": "stats.SV",
+   "sheet": 79,
+   "correct": 77,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Austin Hansen",
+   "field": "stats.L",
+   "sheet": 90,
+   "correct": 91,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Pat Jones",
+   "field": "stats.R",
+   "sheet": 919,
+   "correct": 920,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Pat Jones",
+   "field": "stats.HR",
+   "sheet": 290,
+   "correct": 291,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Pat Jones",
+   "field": "stats.RBI",
+   "sheet": 983,
+   "correct": 987,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Charlie Muir",
+   "field": "stats.R",
+   "sheet": 921,
+   "correct": 922,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Charlie Muir",
+   "field": "stats.K",
+   "sheet": 1367,
+   "correct": 1368,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.R",
+   "sheet": 984,
+   "correct": 885,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.HR",
+   "sheet": 314,
+   "correct": 281,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.RBI",
+   "sheet": 957,
+   "correct": 874,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.SB",
+   "sheet": 79,
+   "correct": 70,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.AVG",
+   "sheet": 0.248,
+   "correct": 0.245,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.OPS",
+   "sheet": 0.773,
+   "correct": 0.761,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.ERA",
+   "sheet": 3.71,
+   "correct": 3.76,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.WHIP",
+   "sheet": 1.219,
+   "correct": 1.227,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.K",
+   "sheet": 1412,
+   "correct": 1333,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.W",
+   "sheet": 88,
+   "correct": 83,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Jack Knott",
+   "field": "stats.L",
+   "sheet": 84,
+   "correct": 80,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2022,
+   "manager": "Gerik Zatorski",
+   "field": "stats.R",
+   "sheet": 770,
+   "correct": 771,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2023,
+   "manager": "John Bottcher",
+   "field": "stats.R",
+   "sheet": 1055,
+   "correct": 1052,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2023,
+   "manager": "John Bottcher",
+   "field": "stats.RBI",
+   "sheet": 972,
+   "correct": 970,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2023,
+   "manager": "John Bottcher",
+   "field": "stats.SB",
+   "sheet": 124,
+   "correct": 122,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2023,
+   "manager": "John Bottcher",
+   "field": "stats.K",
+   "sheet": 1208,
+   "correct": 1206,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2023,
+   "manager": "John Bottcher",
+   "field": "stats.SV",
+   "sheet": 129,
+   "correct": 128,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2024,
+   "manager": "Andrew Virciglio",
+   "field": "stats.K",
+   "sheet": 1504,
+   "correct": 1537,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2025,
+   "manager": "Charlie Muir",
+   "field": "stats.SB",
+   "sheet": 210,
+   "correct": 166,
+   "reason": "Fantrax season total."
+  },
+  {
+   "year": 2025,
+   "manager": "Casey Goldberg",
+   "field": "stats.SB",
+   "sheet": 166,
+   "correct": 210,
+   "reason": "Fantrax season total."
+  }
+ ]
+}

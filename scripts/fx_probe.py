@@ -3,7 +3,7 @@ import json, os, sys, subprocess, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
 env = dict(l.split("=", 1) for l in (root / ".env").read_text().splitlines() if "=" in l and not l.startswith("#"))
-cookie, lid = env["FANTRAX_COOKIE"].strip(), env["FANTRAX_LEAGUE_ID"].strip()
+cookie, lid = env["FANTRAX_COOKIE"].strip(), os.environ.get("FX_LEAGUE") or env["FANTRAX_LEAGUE_ID"].strip()
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
 
 def call(method, **data):

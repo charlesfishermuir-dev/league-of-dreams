@@ -77,3 +77,40 @@ export function Tabs({ items, active }: { items: { href: string; label: string; 
 
 export const th = "px-2 py-2 text-left font-display text-xs font-semibold uppercase tracking-wider text-mute";
 export const td = "px-2 py-2";
+
+/** Short footnote pointing to the full explanation of how 2020 is counted. */
+export function Note2020({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-2 text-xs text-mute">
+      <span className="text-chalk">*</span> {children}{" "}
+      <Link href="/history#how-2020-counts" className="text-red hover:underline">How 2020 is counted →</Link>
+    </p>
+  );
+}
+
+/** The full explanation, shown on the History page (and the 2020 season page). */
+export function How2020Counts() {
+  return (
+    <Card className="relative overflow-hidden p-5 pl-6">
+      <div id="how-2020-counts" className="absolute -top-28" aria-hidden />
+      <div className="absolute inset-y-0 left-0 w-1.5 bg-red" aria-hidden />
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red">League note</p>
+      <h3 className="font-display text-xl font-bold uppercase">How the 2020 season is counted</h3>
+      <p className="mt-2 text-sm text-mute">
+        2020 was the 60-game COVID season, and we played it <span className="text-chalk">all-play</span>: every week,
+        every team faced all 11 other teams. That makes a 2020 record about 3½ times the size of a normal season&apos;s
+        (around 924 category decisions instead of 264, e.g. 594-269-61), so adding it straight into totals would let
+        2020 outweigh every other year. Here&apos;s how the site handles it:
+      </p>
+      <ul className="mt-3 space-y-2 text-sm">
+        <li><span className="font-semibold">All-time records and win %:</span> 2020 counts as <span className="text-chalk">one normal season</span>. Each team&apos;s 2020 record is scaled down to 264 category decisions, keeping the same win %.</li>
+        <li><span className="font-semibold">Single-season records and leaderboards</span> (best and worst seasons, category leaders): 2020 is <span className="text-chalk">left out</span>. A 60-game, all-play season isn&apos;t comparable.</li>
+        <li><span className="font-semibold">Head-to-head:</span> 2020&apos;s regular-season weeks are left out, since everyone played everyone every week. The 2020 playoffs count normally.</li>
+        <li><span className="font-semibold">Championships, playoff appearances and finishes:</span> count normally. The 2020 title is a full ring.</li>
+      </ul>
+      <p className="mt-3 text-sm text-mute">
+        The <Link href="/history/2020" className="text-red hover:underline">2020 season page</Link> always shows the actual results as played.
+      </p>
+    </Card>
+  );
+}

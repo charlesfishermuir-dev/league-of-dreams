@@ -1,10 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Card, FinishBadge, PageTitle, SectionTitle, td, th } from "@/components/ui";
-import { fmtPct, fmtRecord, headToHead, loadHistory, ordinal, SHORT_SEASON, STAGE_LABEL, winPct } from "@/lib/history";
+/* eslint-disable @next/next/no-img-element -- player headshots come from Fantrax */
+import { Card, FinishBadge, Note2020, PageTitle, SectionTitle, td, th } from "@/components/ui";
+import { TeamLogo, UpdatedLine } from "@/components/live";
+import { allTimeRecord, fmtPct, fmtRecord, headToHead, inSeasonRecords, loadHistory, ordinal, SHORT_SEASON, STAGE_LABEL, winPct } from "@/lib/history";
+import { loadCurrentSeason, loadRoster, type RosterPlayer } from "@/lib/live";
 
-export const revalidate = 300;
+export const revalidate = 60;
+
+const ROSTER_GROUPS: { status: RosterPlayer["status"]; label: string }[] = [
+  { status: "active", label: "Starting lineup" },
+  { status: "reserve", label: "Bench" },
+  { status: "injured", label: "Injured list" },
+  { status: "minors", label: "Minors" },
+  { status: "other", label: "Other" },
+];
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -22,13 +33,13 @@ export default async function TeamPage({ params }: Props) {
   if (!f) notFound();
 
   const seasons = h.teamSeasons.filter((t) => t.franchise_id === f.id).sort((a, b) => b.year - a.year);
-  const w = seasons.reduce((s, t) => s + t.wins, 0);
-  const l = seasons.reduce((s, t) => s + t.losses, 0);
-  const t = seasons.reduce((s, x) => s + x.ties, 0);
+  const allTime = allTimeRecord(seasons);
+  const played2020 = seasons.some((s) => s.year === SHORT_SEASON);
   const rings = seasons.filter((x) => x.finish === "champion").map((x) => x.year);
   const runnerUps = seasons.filter((x) => x.finish === "runner_up").map((x) => x.year);
   const playoffYears = seasons.filter((x) => x.finish).length;
-  const best = [...seasons].sort((a, b) => winPct(b.wins, b.losses, b.ties) - winPct(a.wins, a.losses, a.ties))[0];
+  const comparable = seasons.filter(inSeasonRecords);
+  const best = [...(comparable.length ? comparable : seasons)].sort((a, b) => winPct(b.wins, b.losses, b.ties) - winPct(a.wins, a.losses, a.ties))[0];
 
   // Name history, oldest first, collapsing consecutive years with the same name.
   const names: { name: string; from: number; to: number }[] = [];
@@ -43,28 +54,64 @@ export default async function TeamPage({ params }: Props) {
   const playoffGames = h.matchups
     .filter((m) => m.stage !== "regular" && (m.home_id === f.id || m.away_id === f.id))
     .sort((a, b) => b.year - a.year || (a.stage === "final" ? -1 : 1));
-  const h2h = headToHead(h, current, ["semifinal", "final", "third_place"]);
+  const h2h = headToHead(h, current);
+  const cur = await loadCurrentSeason();
+  const roster = f.active ? await loadRoster(cur.year, f.id) : [];
 
   return (
     <>
-      <PageTitle
-        kicker={f.active ? `Since ${seasons.at(-1)!.year}` : `${seasons.at(-1)!.year}–${seasons[0].year}`}
-        sub={<>Managed by <span className="text-chalk">{managers.join(", then ")}</span></>}
-      >
-        {f.name}
-      </PageTitle>
+      <div className="flex items-start gap-4">
+        {cur.logo.get(f.id) && <TeamLogo url={cur.logo.get(f.id)} name={f.name} size={72} />}
+        <PageTitle
+          kicker={f.active ? `Since ${seasons.at(-1)!.year}` : `${seasons.at(-1)!.year}–${seasons[0].year}`}
+          sub={<>Managed by <span className="text-chalk">{managers.join(", then ")}</span></>}
+        >
+          {f.name}
+        </PageTitle>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="All-time" value={fmtRecord(w, l, t)} sub={fmtPct(winPct(w, l, t))} />
+        <Stat label={played2020 ? "All-time*" : "All-time"} value={fmtRecord(allTime.w, allTime.l, allTime.t)} sub={fmtPct(allTime.pct)} />
         <Stat label="Championships" value={String(rings.length)} sub={rings.join(", ") || "—"} gold={rings.length > 0} />
         <Stat label="Playoffs" value={`${playoffYears}`} sub={`of ${seasons.length} seasons`} />
         <Stat label="Best season" value={String(best.year)} sub={`${fmtRecord(best.wins, best.losses, best.ties)} · ${ordinal(best.place)}`} />
       </div>
       {runnerUps.length > 0 && <p className="mt-3 text-sm text-mute">Runner-up: {runnerUps.join(", ")}</p>}
+      {played2020 && <Note2020>All-time record counts 2020 as one normal season. Best season leaves 2020 out.</Note2020>}
 
-      <Card className="mt-6 border-dashed p-4 text-center text-sm text-mute">
-        Current roster arrives with the Fantrax sync in Stage 2.
-      </Card>
+      {roster.length > 0 && (
+        <>
+          <SectionTitle kicker={`${cur.year} roster`}>Roster</SectionTitle>
+          <div className="grid gap-3 md:grid-cols-2">
+            {ROSTER_GROUPS.map(({ status, label }) => {
+              const players = roster.filter((p) => p.status === status);
+              if (!players.length) return null;
+              return (
+                <Card key={status}>
+                  <p className="border-b border-line px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider text-mute">
+                    {label} · {players.length}
+                  </p>
+                  <ul className="divide-y divide-line/60 text-sm">
+                    {players.map((p) => (
+                      <li key={p.player_id} className="flex items-center gap-2.5 px-3 py-1.5">
+                        <span className="w-10 shrink-0 font-display text-xs font-semibold uppercase text-mute">{p.slot}</span>
+                        {p.headshot_url ? (
+                          <img src={p.headshot_url} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full bg-navy-800 object-cover" />
+                        ) : (
+                          <span className="h-7 w-7 shrink-0 rounded-full bg-navy-800" aria-hidden />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                        <span className="shrink-0 text-xs text-mute">{p.positions} · {p.mlb_team}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              );
+            })}
+          </div>
+          <div className="mt-1"><UpdatedLine status={cur.sync.get("rosters")} /></div>
+        </>
+      )}
 
       <SectionTitle kicker="Year by year">Season history</SectionTitle>
       <Card className="table-scroll">
@@ -146,7 +193,7 @@ export default async function TeamPage({ params }: Props) {
 
       {h2h.length > 0 && (
         <>
-          <SectionTitle kicker={current}>Playoff head-to-head</SectionTitle>
+          <SectionTitle kicker={current}>Head-to-head</SectionTitle>
           <Card className="table-scroll">
             <table className="w-full text-sm">
               <thead className="border-b border-line">
@@ -167,7 +214,9 @@ export default async function TeamPage({ params }: Props) {
               </tbody>
             </table>
           </Card>
-          <p className="mt-2 text-xs text-mute">Regular-season head-to-head (2018 on) arrives with the Fantrax import in Stage 2.</p>
+          <p className="mt-2 text-xs text-mute">
+            Every regular-season meeting since 2019 (except 2020&apos;s all-play weeks) plus every playoff meeting since 2007.
+          </p>
         </>
       )}
     </>

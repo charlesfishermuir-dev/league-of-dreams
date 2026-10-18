@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Card, PageTitle, SectionTitle, TeamLink, td, th } from "@/components/ui";
+import { Card, How2020Counts, Note2020, PageTitle, SectionTitle, TeamLink, td, th } from "@/components/ui";
 import { champions, fmtPct, fmtRecord, loadHistory, managerTotals, SHORT_SEASON } from "@/lib/history";
 
 export const metadata: Metadata = { title: "League History" };
@@ -68,7 +68,7 @@ export default async function HistoryPage() {
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-mute">* {SHORT_SEASON}: COVID-shortened 60-game season.</p>
+      <Note2020>{SHORT_SEASON}: COVID-shortened 60-game season, played all-play.</Note2020>
 
       <SectionTitle kicker="Hardware">Trophy case</SectionTitle>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -128,7 +128,13 @@ export default async function HistoryPage() {
           </tbody>
         </table>
       </Card>
-      <p className="mt-2 text-xs text-mute">Greyed-out names are no longer in the league. Win % counts a tie as half a win.</p>
+      <Note2020>
+        2020 counts as one normal season in these totals. Greyed-out names are no longer in the league. Win % counts a tie as half a win.
+      </Note2020>
+
+      <div className="mt-10">
+        <How2020Counts />
+      </div>
     </>
   );
 }

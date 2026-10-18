@@ -1,12 +1,20 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Card, SectionTitle, TeamLink } from "@/components/ui";
-import { champions, fmtRecord, loadHistory, managerTotals } from "@/lib/history";
+import { MatchupCard, TeamLogo, UpdatedLine } from "@/components/live";
+import { champions, fmtRecord, managerTotals } from "@/lib/history";
+import { fmtDateRange, fmtDay, loadCurrentSeason, loadRecentTransactions } from "@/lib/live";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export default async function Home() {
-  const h = await loadHistory();
+  const cur = await loadCurrentSeason();
+  const { h, season, periods, currentPeriod, logo } = cur;
+  const period = periods.find((p) => p.period === currentPeriod);
+  const games = cur.matchups.filter((m) => m.period === currentPeriod);
+  const isLive = games.some((m) => m.status === "live");
+  const seasonOver = !isLive && currentPeriod === periods.at(-1)?.period && games.every((m) => m.status === "final");
+  const txGroups = (await loadRecentTransactions(40)).slice(0, 8);
+
   const champs = champions(h).filter((c) => c.champion);
   const latest = champs.at(-1)!;
   const slug = (id: number) => h.franchiseById.get(id)!.slug;
@@ -18,42 +26,106 @@ export default async function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative -mx-4 -mt-6 mb-8 overflow-hidden border-b border-line bg-gradient-to-br from-navy-700 via-navy-900 to-ink px-4 pb-8 pt-10 sm:rounded-b-xl">
-        <div className="absolute -right-10 top-0 h-full w-40 skew-x-[-18deg] bg-red/90 sm:w-64" aria-hidden />
+      <section className="relative -mx-4 -mt-6 mb-6 overflow-hidden border-b border-line bg-gradient-to-br from-navy-700 via-navy-900 to-ink px-4 pb-6 pt-8 sm:rounded-b-xl">
+        <div className="absolute -right-10 top-0 h-full w-32 skew-x-[-18deg] bg-red/90 sm:w-64" aria-hidden />
         <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red sm:text-white">Est. 2007 · {h.seasons.length} seasons</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red sm:text-white">{season.league_name ?? "League of Dreams"} · {season.year}</p>
           <h1 className="mt-2 font-display text-5xl font-bold uppercase leading-[0.9] tracking-wide sm:text-7xl">
             League
             <br />
             of Dreams
           </h1>
-          <p className="mt-4 max-w-md text-mute">Twelve managers. Twelve categories. One ring.</p>
+        </div>
+      </section>
+
+      {/* Scoreboard */}
+      <section>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div className="flex items-end gap-3">
+            <span className="h-7 w-1.5 shrink-0 bg-red" aria-hidden />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red">
+                {seasonOver ? `${season.year} · Final` : isLive ? "Live now" : "Scoreboard"} · {fmtDateRange(period)}
+              </p>
+              <h2 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">{period?.label ?? "Scoreboard"}</h2>
+            </div>
+          </div>
+          <UpdatedLine status={cur.sync.get("matchups")} />
+        </div>
+        {games.length === 0 ? (
+          <Card className="p-5 text-center text-mute">No matchups this week.</Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {games.map((m) => (
+              <MatchupCard key={m.id} m={m} h={h} logo={logo} categories={season.categories} />
+            ))}
+          </div>
+        )}
+        <div className="mt-2 flex gap-4 text-sm font-semibold">
+          <Link href="/standings" className="text-red hover:underline">Standings →</Link>
+          <Link href={`/schedule?week=${currentPeriod}`} className="text-red hover:underline">Full schedule →</Link>
         </div>
       </section>
 
       {/* Reigning champion */}
-      <Card className="relative mb-8 overflow-hidden">
+      <Card className="relative my-8 overflow-hidden">
         <div className="absolute inset-y-0 left-0 w-1.5 bg-gold" aria-hidden />
         <div className="flex flex-wrap items-center justify-between gap-4 p-5 pl-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{latest.season.year} Champion</p>
-            <p className="font-display text-3xl font-bold uppercase leading-tight">
-              <TeamLink slug={slug(latest.champion!.franchise_id)}>{latest.champion!.team_name}</TeamLink>
-            </p>
-            <p className="text-sm text-mute">
-              {latest.champion!.manager_label} · {fmtRecord(latest.champion!.wins, latest.champion!.losses, latest.champion!.ties)} regular season
-            </p>
+          <div className="flex items-center gap-4">
+            <TeamLogo url={logo.get(latest.champion!.franchise_id)} name={latest.champion!.team_name} size={56} />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{latest.season.year} Champion</p>
+              <p className="font-display text-3xl font-bold uppercase leading-tight">
+                <TeamLink slug={slug(latest.champion!.franchise_id)}>{latest.champion!.team_name}</TeamLink>
+              </p>
+              <p className="text-sm text-mute">
+                {latest.champion!.manager_label} · {fmtRecord(latest.champion!.wins, latest.champion!.losses, latest.champion!.ties)} regular season
+              </p>
+            </div>
           </div>
           <span className="text-5xl" aria-hidden>🏆</span>
         </div>
       </Card>
 
-      <Card className="mb-8 border-dashed p-5 text-center text-mute">
-        <p className="font-display text-lg uppercase tracking-wide text-chalk">Live scoreboard</p>
-        <p className="text-sm">This week&apos;s matchups, news and transactions arrive in Stage 2.</p>
-      </Card>
-
       <div className="grid gap-8 md:grid-cols-2">
+        <section>
+          <SectionTitle kicker="Wire">Recent transactions</SectionTitle>
+          <Card>
+            <ul className="divide-y divide-line">
+              {txGroups.map((g) => {
+                const first = g[0];
+                const isTrade = g.some((t) => t.type === "trade");
+                const team = (id: number | null) => (id ? h.franchiseById.get(id)?.name : undefined);
+                return (
+                  <li key={first.fantrax_set_id} className="px-4 py-2.5 text-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2 text-xs text-mute">
+                      <span className="font-semibold uppercase tracking-wider">
+                        {isTrade ? "Trade" : team(first.franchise_id)}
+                      </span>
+                      <span>{fmtDay(first.occurred_at)}</span>
+                    </div>
+                    <ul className="space-y-0.5">
+                      {g.map((t) => (
+                        <li key={t.id} className="flex gap-2">
+                          <TxBadge type={t.type} />
+                          <span className="min-w-0 truncate">
+                            {t.player_name}
+                            <span className="text-mute">
+                              {t.player_positions ? ` ${t.player_positions}` : ""}
+                              {isTrade && t.type === "trade" ? ` → ${team(t.franchise_id)}` : ""}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+          <div className="mt-1"><UpdatedLine status={cur.sync.get("transactions")} /></div>
+        </section>
+
         <section>
           <SectionTitle kicker="Banner wall">Recent champions</SectionTitle>
           <Card>
@@ -69,12 +141,7 @@ export default async function Home() {
               ))}
             </ul>
           </Card>
-          <Link href="/history" className="mt-2 inline-block text-sm font-semibold text-red hover:underline">
-            Every champion since 2007 →
-          </Link>
-        </section>
 
-        <section>
           <SectionTitle kicker="Trophy case">Most rings</SectionTitle>
           <Card>
             <ul className="divide-y divide-line">
@@ -89,16 +156,25 @@ export default async function Home() {
               ))}
             </ul>
           </Card>
-          <Link href="/records" className="mt-2 inline-block text-sm font-semibold text-red hover:underline">
-            All-time records →
+          <Link href="/history" className="mt-2 inline-block text-sm font-semibold text-red hover:underline">
+            League history →
           </Link>
         </section>
-      </div>
-
-      <div className="mt-10 flex justify-center opacity-80">
-        <Image src="/league-logo.jpg" alt="League of Dreams logo" width={240} height={135} className="rounded-lg" />
       </div>
     </>
   );
 }
 
+function TxBadge({ type }: { type: string }) {
+  const style: Record<string, string> = {
+    claim: "bg-emerald-500/20 text-emerald-300",
+    drop: "bg-red/20 text-red",
+    trade: "bg-gold/20 text-gold",
+  };
+  const label: Record<string, string> = { claim: "Add", drop: "Drop", trade: "Trade" };
+  return (
+    <span className={`mt-0.5 h-fit shrink-0 rounded px-1.5 text-[10px] font-bold uppercase leading-4 tracking-wider ${style[type] ?? "bg-navy-700 text-mute"}`}>
+      {label[type] ?? type}
+    </span>
+  );
+}

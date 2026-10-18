@@ -83,9 +83,9 @@ class Franchises:
     """Looks up the franchise for a (manager, year) using data/franchises.json."""
 
     def __init__(self):
-        config = json.loads((ROOT / "data" / "franchises.json").read_text())
-        self.list = config["franchises"]
-        self.aliases = config.get("manager_aliases", {})
+        self.config = json.loads((ROOT / "data" / "franchises.json").read_text())
+        self.list = self.config["franchises"]
+        self.aliases = self.config.get("manager_aliases", {})
 
     def clean_manager(self, name: str) -> str:
         name = " ".join(name.split())
@@ -99,8 +99,49 @@ class Franchises:
                     return f["slug"]
         return None
 
+    def manager_for(self, slug: str, year: int) -> str | None:
+        for f in self.list:
+            if f["slug"] == slug:
+                for m in f["managers"]:
+                    if m["from"] <= year <= m.get("to", 9999):
+                        return m["name"]
+        return None
+
     def managers(self) -> list[str]:
         return sorted({m["name"] for f in self.list for m in f["managers"]})
+
+
+def apply_corrections(team_seasons, fr: Franchises, rep: Report):
+    """Apply data/corrections.json. A fix only applies while the sheet still has the old value."""
+    path = ROOT / "data" / "corrections.json"
+    if not path.exists():
+        return
+    by_key = {(t["year"], t["manager"]): t for t in team_seasons}
+    applied = 0
+    for c in json.loads(path.read_text())["corrections"]:
+        ts = by_key.get((c["year"], fr.clean_manager(c["manager"])))
+        label = f"Correction {c['year']} {c['manager']} {c['field']}"
+        if not ts:
+            rep.problem(f"{label}: no such team-season in the sheet.")
+            continue
+        target, key = (ts["stats"], c["field"][6:]) if c["field"].startswith("stats.") else (ts, {
+            "wins": "wins", "losses": "losses", "ties": "ties", "team_name": "team_name"}.get(c["field"]))
+        if key is None:
+            rep.problem(f"{label}: unknown field.")
+            continue
+        current = target.get(key)
+        same = lambda a, b: a == b or (isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) < 1e-9)
+        if same(current, c["correct"]):
+            rep.note(f"{label}: the sheet already has {c['correct']!r}; this correction can be deleted.")
+        elif same(current, c["sheet"]):
+            target[key] = c["correct"]
+            if key in ("wins", "losses", "ties"):
+                ts["sheet_pct"] = None  # the sheet's Win % was calculated from the wrong record
+            applied += 1
+        else:
+            rep.problem(f"{label}: the sheet now says {current!r} (expected {c['sheet']!r}), so the correction was skipped.")
+    if applied:
+        rep.note(f"Applied {applied} correction(s) from data/corrections.json.")
 
 
 def parse_seasons(rows, fr: Franchises, rep: Report):
@@ -125,6 +166,8 @@ def parse_seasons(rows, fr: Franchises, rep: Report):
         if finish_text and finish_text not in FINISH:
             rep.problem(f"Seasons {year} {r[2].strip()}: unrecognised Finish '{finish_text}'.")
 
+    apply_corrections(team_seasons, fr, rep)
+
     by_year = defaultdict(list)
     for ts in team_seasons:
         by_year[ts["year"]].append(ts)
@@ -139,8 +182,12 @@ def parse_seasons(rows, fr: Franchises, rep: Report):
         w, l, t = (sum(x[k] for x in teams) for k in ("wins", "losses", "ties"))
         if w != l:
             rep.problem(f"Seasons {year}: total wins ({w}) ≠ total losses ({l}). A record is probably mistyped.")
+        usual = Counter(x["wins"] + x["losses"] + x["ties"] for x in teams).most_common(1)[0][0]
         for x in teams:
             games = x["wins"] + x["losses"] + x["ties"]
+            if games != usual:
+                rep.problem(f"Seasons {year} {x['team_name']}: {x['wins']}-{x['losses']}-{x['ties']} adds up to {games} "
+                            f"category matchups; everyone else has {usual}. A W, L or T is probably mistyped.")
             pct = (x["wins"] + 0.5 * x["ties"]) / games if games else 0
             pct_no_ties = x["wins"] / (x["wins"] + x["losses"]) if x["wins"] + x["losses"] else 0
             if x["sheet_pct"] is not None and min(abs(pct - x["sheet_pct"]), abs(pct_no_ties - x["sheet_pct"])) > 0.0015:
@@ -264,7 +311,8 @@ def write(team_seasons, by_year, matchups, seeds, fr: Franchises):
         mid = dict(conn.execute("select name, id from managers").fetchall())
 
         # Replace everything that came from the sheet; Fantrax rows stay.
-        conn.execute("delete from seasons where source = 'sheet'")
+        conn.execute("delete from matchups where source = 'sheet'")
+        conn.execute("delete from team_seasons where source = 'sheet'")
         for year, teams in sorted(by_year.items()):
             has_ops = any("OPS" in t["stats"] for t in teams)
             cats = HITTING + PITCHING if has_ops else [c for c in HITTING + PITCHING if c != "OPS"]
@@ -272,7 +320,10 @@ def write(team_seasons, by_year, matchups, seeds, fr: Franchises):
             if not has_ops:
                 notes = ((notes + " ") if notes else "") + "12th category before OPS not recorded."
             conn.execute(
-                "insert into seasons (year, league_name, num_teams, categories, notes, source) values (%s, %s, %s, %s, %s, 'sheet')",
+                """insert into seasons (year, league_name, num_teams, categories, notes, source)
+                   values (%s, %s, %s, %s, %s, 'sheet')
+                   on conflict (year) do update set league_name = excluded.league_name, num_teams = excluded.num_teams,
+                       categories = excluded.categories, notes = excluded.notes""",
                 (year, f"League of Dreams {roman(year - 2006)}", len(teams), cats, notes),
             )
         for t in team_seasons:

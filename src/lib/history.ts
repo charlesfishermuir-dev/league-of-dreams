@@ -11,6 +11,8 @@ export type Season = {
   num_teams: number;
   categories: string[];
   notes: string | null;
+  is_current: boolean;
+  current_period: number | null;
 };
 export type Finish = "champion" | "runner_up" | "third" | "fourth" | "semifinal" | null;
 export type TeamSeason = {
@@ -43,6 +45,9 @@ export type Matchup = {
   home_stats: Stats;
   away_stats: Stats;
   winner_id: number | null;
+  status: "final" | "live" | "upcoming";
+  /** 2020 only: every team played every other team each week. */
+  all_play: boolean;
 };
 
 export type History = {
@@ -88,13 +93,39 @@ export function winPct(w: number, l: number, t: number): number {
 }
 
 export const fmtPct = (p: number) => p.toFixed(3).replace(/^0/, "");
-export const fmtRecord = (w: number, l: number, t: number) => `${w}-${l}-${t}`;
+export const fmtRecord = (w: number, l: number, t: number) => `${Math.round(w)}-${Math.round(l)}-${Math.round(t)}`;
 
 /** Categories where a lower number is better. */
 export const LOWER_IS_BETTER = new Set(["ERA", "WHIP", "L"]);
-/** Counting stats, which aren't comparable in the shortened 2020 season. */
-export const COUNTING = new Set(["R", "HR", "RBI", "SB", "K", "W", "L", "SV", "TB", "H", "BB"]);
+/**
+ * 2020 was a 60-game COVID season played "all-play": every team faced all 11
+ * others every week, so its records are ~3.5x the size of a normal season's.
+ * The rules for counting it (explained on the History page) live here:
+ *  - all-time totals: scaled down to one normal season, keeping the win %
+ *  - single-season records and leaderboards: left out
+ *  - head-to-head: all-play weeks left out (see headToHead)
+ */
 export const SHORT_SEASON = 2020;
+/** A normal season's record size: 22 weeks x 12 categories. */
+export const NORMAL_SEASON_DECISIONS = 264;
+
+export type Record3 = { w: number; l: number; t: number };
+
+/** A team-season's record as it counts toward all-time totals. */
+export function countedRecord(ts: TeamSeason): Record3 {
+  const games = ts.wins + ts.losses + ts.ties;
+  const k = ts.year === SHORT_SEASON && games > 0 ? NORMAL_SEASON_DECISIONS / games : 1;
+  return { w: ts.wins * k, l: ts.losses * k, t: ts.ties * k };
+}
+
+/** All-time record across several team-seasons, with 2020 counted as one normal season. */
+export function allTimeRecord(seasons: TeamSeason[]): Record3 & { pct: number } {
+  const r = seasons.map(countedRecord).reduce((a, b) => ({ w: a.w + b.w, l: a.l + b.l, t: a.t + b.t }), { w: 0, l: 0, t: 0 });
+  return { ...r, pct: winPct(r.w, r.l, r.t) };
+}
+
+/** Single-season record books leave 2020 out. */
+export const inSeasonRecords = (ts: TeamSeason) => ts.year !== SHORT_SEASON;
 /** First season with the extra INF roster spot. */
 export const INF_SPOT_YEAR = 2021;
 
@@ -165,9 +196,10 @@ export function managerTotals(h: History): ManagerTotals[] {
     m.seasons++;
     m.last = ts.year;
     m.latestTeam = ts.team_name;
-    m.w += ts.wins;
-    m.l += ts.losses;
-    m.t += ts.ties;
+    const r = countedRecord(ts);
+    m.w += r.w;
+    m.l += r.l;
+    m.t += r.t;
     if (!m.franchiseSlugs.includes(f.slug)) m.franchiseSlugs.push(f.slug);
     if (ts.finish === "champion") m.rings.push(ts.year);
     if (ts.finish === "runner_up") m.runnerUps.push(ts.year);
@@ -188,6 +220,7 @@ export function headToHead(h: History, manager: string, stages?: Matchup["stage"
   const rows = new Map<string, H2HRow>();
   for (const m of h.matchups) {
     if (stages && !stages.includes(m.stage)) continue;
+    if (m.all_play || m.status !== "final") continue;
     const home = h.teamSeason.get(`${m.year}:${m.home_id}`)?.manager_label;
     const away = h.teamSeason.get(`${m.year}:${m.away_id}`)?.manager_label;
     if (!home || !away || (home !== manager && away !== manager)) continue;

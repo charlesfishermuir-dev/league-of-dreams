@@ -1,5 +1,6 @@
 {
-  "_help": "Every franchise (league seat) and who managed it in which years. The history import uses manager + year to place each team-season, so team-name spellings in the sheet don't matter. 'name' is the current/last team name. Add 'manager_aliases' for misspelled manager names.",
+  "_help": "Every franchise (league seat) and who managed it in which years. The history import uses manager + year to place each team-season, so team-name spellings in the sheet don't matter. 'name' is the current/last team name. Add 'manager_aliases' for misspelled manager names. If the Fantrax sync can't tell which franchise a Fantrax team belongs to (e.g. after two teams rename in the same year), add \"<fantrax team id>\": \"<slug>\" to 'fantrax_team_overrides'.",
+  "fantrax_team_overrides": {},
   "manager_aliases": {
     "Charlier Muir": "Charlie Muir",
     "Andrew Behou": "Andrew Beghou"
