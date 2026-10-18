@@ -4,22 +4,26 @@ import { Flash } from "@/components/admin";
 import { requireAdmin } from "@/lib/supabase-server";
 import { loadHistory } from "@/lib/history";
 import { fmtChance, LOTTERY_SPOTS, pickProbabilities, playoffSlots, upcomingLottery } from "@/lib/draft";
-import { runLottery, saveLotteryOdds } from "../actions";
+import { cancelLotterySchedule, runLottery, saveLotteryOdds, scheduleLottery } from "../actions";
 
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminLottery({ searchParams }: Props) {
   const { supabase } = await requireAdmin();
   const h = await loadHistory();
-  const [{ data: oddsRows }, { data: existing }] = await Promise.all([
+  const [{ data: oddsRows }, { data: existing }, { data: schedules }] = await Promise.all([
     supabase.from("lottery_odds").select("*").order("seed"),
     supabase.from("drafts").select("year"),
+    supabase.from("lottery_schedule").select("*"),
   ]);
   const odds = (oddsRows ?? []).map((o) => ({ seed: o.seed as number, balls: o.balls === null ? null : Number(o.balls) }));
   const up = upcomingLottery(h, odds);
   const alreadyRun = (existing ?? []).some((d) => d.year === up.draftYear);
   const first = up.oddsSet ? pickProbabilities(up.entrants.map((e) => e.balls!)).map((p) => p[0]) : null;
   const playoff = playoffSlots(h, up.basedOn);
+  const schedule = (schedules ?? []).find((x) => x.year === up.draftYear);
+  const todayCentral = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }); // YYYY-MM-DD
+  const fmtCentral = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
     <>
@@ -54,7 +58,36 @@ export default async function AdminLottery({ searchParams }: Props) {
         </form>
       </Card>
 
-      <h2 className="mb-2 mt-8 font-display text-lg font-bold uppercase tracking-wide">2. Run the {up.draftYear} lottery</h2>
+      <h2 className="mb-2 mt-8 font-display text-lg font-bold uppercase tracking-wide">2. Schedule it (runs itself)</h2>
+      <Card className="p-4 text-sm">
+        {alreadyRun ? (
+          <p className="text-mute">Already drawn.</p>
+        ) : (
+          <>
+            {schedule && (
+              <div className="mb-3 rounded-md bg-navy-800 p-3">
+                <p>
+                  <span className="font-semibold">Scheduled:</span> {fmtCentral(schedule.run_at)} CT. A countdown is showing on the Draft page and Home.
+                </p>
+                {schedule.last_error && <p className="mt-1 text-red">Not run yet: {schedule.last_error} (it retries every minute)</p>}
+                <form action={cancelLotterySchedule} className="mt-2">
+                  <input type="hidden" name="year" value={up.draftYear} />
+                  <button className="text-sm font-semibold text-mute hover:text-red">Cancel the scheduled time</button>
+                </form>
+              </div>
+            )}
+            <form action={scheduleLottery} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="year" value={up.draftYear} />
+              <label className="text-xs text-mute">Date<input type="date" name="day" defaultValue={todayCentral} className="field mt-1 block" /></label>
+              <label className="text-xs text-mute">Time (Central)<input type="time" name="time" defaultValue="12:00" className="field mt-1 block" /></label>
+              <button className="btn">{schedule ? "Change time" : "Schedule"}</button>
+            </form>
+            <p className="mt-2 text-xs text-mute">At that minute the database draws the lottery on its own and everyone watching the countdown sees the reveal start.</p>
+          </>
+        )}
+      </Card>
+
+      <h2 className="mb-2 mt-8 font-display text-lg font-bold uppercase tracking-wide">3. Or run it right now</h2>
       <Card className="p-4 text-sm">
         {alreadyRun ? (
           <p>
@@ -66,6 +99,7 @@ export default async function AdminLottery({ searchParams }: Props) {
           <p className="text-mute">Save the odds for all 8 seeds first.</p>
         ) : (
           <form action={runLottery} className="space-y-3">
+            <input type="hidden" name="year" value={up.draftYear} />
             <p>
               Draws picks 1–8 among: {up.entrants.map((e) => e.ts.team_name).join(", ")}.
               Picks 9–12: {playoff.map((t) => t.team_name).join(", ")}.

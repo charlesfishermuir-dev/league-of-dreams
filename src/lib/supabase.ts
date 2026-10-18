@@ -28,3 +28,10 @@ export async function fetchAll<T>(table: string, columns = "*"): Promise<T[]> {
     if (!data || data.length < pageSize) return rows;
   }
 }
+
+/** Same read-only client, but never cached: for data that must be up to the second (the lottery). */
+export const supabaseFresh = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } },
+);

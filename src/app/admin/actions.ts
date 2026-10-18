@@ -196,44 +196,45 @@ export async function saveLotteryOdds(formData: FormData) {
 
 export async function runLottery(formData: FormData) {
   const { supabase } = await requireAdmin();
-  const { randomInt } = await import("node:crypto");
-  const { loadHistory } = await import("@/lib/history");
-  const { upcomingLottery, playoffSlots, pickProbabilities } = await import("@/lib/draft");
-
-  const { data: odds } = await supabase.from("lottery_odds").select("*").order("seed");
-  const h = await loadHistory();
-  const up = upcomingLottery(h, (odds ?? []).map((o) => ({ seed: o.seed, balls: o.balls === null ? null : Number(o.balls) })));
-  if (text(formData, "confirm") !== String(up.draftYear)) fail("/admin/lottery", `Type ${up.draftYear} in the box to confirm.`);
-  if (!up.complete) fail("/admin/lottery", `The ${up.basedOn} season isn't finished yet, so the lottery teams aren't final.`);
-  if (!up.oddsSet) fail("/admin/lottery", "Fill in the odds for all 8 seeds first.");
-  if (up.entrants.length !== 8) fail("/admin/lottery", `Expected 8 lottery teams, found ${up.entrants.length}.`);
-  const playoff = playoffSlots(h, up.basedOn);
-  if (playoff.length !== 4) fail("/admin/lottery", `Expected 4 playoff teams in ${up.basedOn}, found ${playoff.length}.`);
-
-  // The draw: one pick at a time, each team's chance proportional to its balls.
-  // Odds are scaled to whole numbers so the random roll is exact; the rolls are saved for anyone to check.
-  const first = pickProbabilities(up.entrants.map((e) => e.balls!)).map((p) => p[0]);
-  let pool = up.entrants.map((e) => ({ ...e, weight: Math.round(e.balls! * 1000) }));
-  const draws: { pick: number; roll: number; out_of: number; franchise_id: number }[] = [];
-  for (let pick = 1; pick <= 8; pick++) {
-    const outOf = pool.reduce((s, e) => s + e.weight, 0);
-    const roll = randomInt(outOf);
-    let acc = 0;
-    const winner = pool.find((e) => (acc += e.weight) > roll)!;
-    draws.push({ pick, roll, out_of: outOf, franchise_id: winner.ts.franchise_id });
-    pool = pool.filter((e) => e !== winner);
-  }
-
-  const order = [
-    ...draws.map((d) => ({ slot: d.pick, franchise_id: d.franchise_id, how: "lottery",
-                           seed: up.entrants.find((e) => e.ts.franchise_id === d.franchise_id)!.seed })),
-    ...playoff.map((ts, i) => ({ slot: 9 + i, franchise_id: ts.franchise_id, how: "playoffs", seed: null })),
-  ];
-  const entrants = up.entrants.map((e, i) => ({ seed: e.seed, franchise_id: e.ts.franchise_id, team_name: e.ts.team_name,
-                                                balls: e.balls, chance_first: first[i] }));
-  const { error } = await supabase.rpc("record_lottery", {
-    p_year: up.draftYear, p_based_on: up.basedOn, p_order: order, p_entrants: entrants, p_draws: draws });
+  const year = Number(formData.get("year"));
+  if (text(formData, "confirm") !== String(year)) fail("/admin/lottery", `Type ${year} in the box to confirm.`);
+  // The draw itself happens in the database (same code as the scheduled run).
+  const { error } = await supabase.rpc("run_lottery_now", { p_year: year });
   if (error) fail("/admin/lottery", error.message);
   refreshSite();
-  redirect(`/draft/${up.draftYear}?reveal=1`);
+  redirect(`/draft/${year}?reveal=1`);
+}
+
+/** Central-time wall clock ("2026-10-18" + "12:00") -> exact moment, handling daylight saving. */
+function centralToUtc(day: string, time: string): Date {
+  const guess = new Date(`${day}T${time}:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour12: false, year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(guess);
+  const v = (t: string) => Number(parts.find((x) => x.type === t)!.value);
+  const asCentral = Date.UTC(v("year"), v("month") - 1, v("day"), v("hour") % 24, v("minute"));
+  return new Date(guess.getTime() + (guess.getTime() - asCentral));
+}
+
+export async function scheduleLottery(formData: FormData) {
+  const { supabase, email } = await requireAdmin();
+  const year = Number(formData.get("year"));
+  const day = text(formData, "day");
+  const time = text(formData, "time") || "12:00";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !/^\d{2}:\d{2}$/.test(time)) fail("/admin/lottery", "Pick a date and time.");
+  const runAt = centralToUtc(day, time);
+  if (runAt.getTime() < Date.now() + 60_000) fail("/admin/lottery", "Pick a time at least a minute from now.");
+  const { error } = await supabase.from("lottery_schedule").upsert(
+    { year, run_at: runAt.toISOString(), status: "scheduled", last_error: null, created_by: email, updated_at: new Date().toISOString() },
+    { onConflict: "year" });
+  if (error) fail("/admin/lottery", error.message);
+  refreshSite();
+  redirect("/admin/lottery?saved=1");
+}
+
+export async function cancelLotterySchedule(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const { error } = await supabase.from("lottery_schedule").delete().eq("year", Number(formData.get("year"))).eq("status", "scheduled");
+  if (error) fail("/admin/lottery", error.message);
+  refreshSite();
+  redirect("/admin/lottery?deleted=1");
 }

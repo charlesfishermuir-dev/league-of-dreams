@@ -4,6 +4,8 @@ import { MatchupCard, TeamLogo, UpdatedLine } from "@/components/live";
 import { champions, fmtRecord, managerTotals } from "@/lib/history";
 import { fmtDateRange, fmtDay, loadCurrentSeason, loadRecentTransactions } from "@/lib/live";
 import { excerpt, fmtNewsDate, loadNews, NEWS_KINDS } from "@/lib/news";
+import { LotteryCountdown } from "@/components/lottery-countdown";
+import { loadLotterySchedule } from "@/lib/draft";
 
 export const revalidate = 60;
 
@@ -14,10 +16,12 @@ export default async function Home() {
   const games = cur.matchups.filter((m) => m.period === currentPeriod);
   const isLive = games.some((m) => m.status === "live");
   const seasonOver = !isLive && currentPeriod === periods.at(-1)?.period && games.every((m) => m.status === "final");
-  const [txGroups, news] = await Promise.all([
+  const [txGroups, news, lottery] = await Promise.all([
     loadRecentTransactions(40).then((g) => g.slice(0, 8)),
     loadNews(3),
+    loadLotterySchedule(season.year + 1),
   ]);
+  const lotterySoon = lottery?.status === "scheduled" && new Date(lottery.run_at).getTime() - Date.now() < 7 * 86_400_000;
 
   const champs = champions(h).filter((c) => c.champion);
   const latest = champs.at(-1)!;
@@ -41,6 +45,12 @@ export default async function Home() {
           </h1>
         </div>
       </section>
+
+      {lotterySoon && (
+        <Link href="/draft" className="mb-8 block">
+          <LotteryCountdown year={season.year + 1} runAt={lottery!.run_at} lastError={lottery!.last_error} compact />
+        </Link>
+      )}
 
       {/* Scoreboard */}
       <section>

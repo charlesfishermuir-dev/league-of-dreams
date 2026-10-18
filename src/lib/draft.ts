@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { supabase } from "./supabase";
+import { supabaseFresh as supabase } from "./supabase";
 import type { History, TeamSeason } from "./history";
 
 export const LOTTERY_SPOTS = 8;
@@ -35,6 +35,13 @@ export const loadDrafts = cache(async () => {
     odds: odds.map((o) => ({ seed: o.seed, balls: o.balls === null ? null : Number(o.balls) })),
   };
 });
+
+export type LotterySchedule = { year: number; run_at: string; status: "scheduled" | "done"; last_error: string | null };
+
+export async function loadLotterySchedule(year: number): Promise<LotterySchedule | null> {
+  const { data } = await supabase.from("lottery_schedule").select("*").eq("year", year).maybeSingle();
+  return (data as LotterySchedule) ?? null;
+}
 
 export async function loadDraftPicks(year: number) {
   return rows<DraftPick>(supabase.from("draft_picks").select("*").eq("year", year).order("pick"), "draft picks");

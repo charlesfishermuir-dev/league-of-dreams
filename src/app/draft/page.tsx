@@ -2,17 +2,19 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Card, PageTitle, SectionTitle, TeamLink, td, th } from "@/components/ui";
 import { TeamLogo } from "@/components/live";
+import { LotteryCountdown } from "@/components/lottery-countdown";
 import { loadHistory } from "@/lib/history";
 import { loadCurrentSeason } from "@/lib/live";
-import { draftTeamName, fmtChance, LOTTERY_SPOTS, loadDrafts, pickProbabilities, playoffSlots, upcomingLottery } from "@/lib/draft";
+import { draftTeamName, fmtChance, LOTTERY_SPOTS, loadDrafts, loadLotterySchedule, pickProbabilities, playoffSlots, upcomingLottery } from "@/lib/draft";
 
 export const metadata: Metadata = { title: "Draft Lottery" };
-export const revalidate = 60;
+export const dynamic = "force-dynamic"; // the countdown and results must never be stale
 
 export default async function DraftPage() {
   const [h, { drafts, lotteries, odds }, cur] = await Promise.all([loadHistory(), loadDrafts(), loadCurrentSeason()]);
   const up = upcomingLottery(h, odds);
   const done = lotteries.get(up.draftYear) ?? drafts.find((d) => d.year === up.draftYear);
+  const schedule = done ? null : await loadLotterySchedule(up.draftYear);
   const probs = up.oddsSet ? pickProbabilities(up.entrants.map((e) => e.balls!)) : null;
   const totalBalls = up.entrants.reduce((s, e) => s + (e.balls ?? 0), 0);
   const playoff = playoffSlots(h, up.basedOn);
@@ -23,6 +25,12 @@ export default async function DraftPage() {
       <PageTitle kicker="5-round keeper draft" sub="How the draft order is set, the odds, and every lottery since 2020.">
         Draft Lottery
       </PageTitle>
+
+      {schedule && (
+        <div className="mb-8">
+          <LotteryCountdown year={up.draftYear} runAt={schedule.run_at} lastError={schedule.last_error} />
+        </div>
+      )}
 
       {/* The next draft */}
       {done ? (

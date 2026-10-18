@@ -7,7 +7,7 @@ import { loadHistory } from "@/lib/history";
 import { loadCurrentSeason } from "@/lib/live";
 import { draftTeamName, fmtChance, loadDraftPicks, loadDrafts, pickProbabilities, ROUNDS } from "@/lib/draft";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic"; // results appear the moment the lottery is drawn
 
 type Props = { params: Promise<{ year: string }>; searchParams: Promise<{ reveal?: string }> };
 
