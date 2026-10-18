@@ -77,6 +77,15 @@ export default async function TeamPage({ params }: Props) {
         <Stat label="Best season" value={String(best.year)} sub={`${fmtRecord(best.wins, best.losses, best.ties)} · ${ordinal(best.place)}`} />
       </div>
       {runnerUps.length > 0 && <p className="mt-3 text-sm text-mute">Runner-up: {runnerUps.join(", ")}</p>}
+      {h.awards.some((a) => a.franchise_id === f.id) && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {h.awards.filter((a) => a.franchise_id === f.id).map((a) => (
+            <span key={a.id} className="rounded-full bg-gold/15 px-3 py-1 text-sm text-gold" title={a.note ?? undefined}>
+              🏅 {a.year} {a.name}{a.recipient ? ` · ${a.recipient}` : ""}
+            </span>
+          ))}
+        </div>
+      )}
       {played2020 && <Note2020>All-time record counts 2020 as one normal season. Best season leaves 2020 out.</Note2020>}
 
       {roster.length > 0 && (

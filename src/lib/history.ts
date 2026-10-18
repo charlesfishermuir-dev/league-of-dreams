@@ -50,8 +50,11 @@ export type Matchup = {
   all_play: boolean;
 };
 
+export type Award = { id: number; year: number; name: string; franchise_id: number | null; recipient: string | null; note: string | null };
+
 export type History = {
   franchises: Franchise[];
+  awards: Award[];
   managers: Manager[];
   seasons: Season[];
   teamSeasons: TeamSeason[];
@@ -63,7 +66,7 @@ export type History = {
 
 /** All history, loaded once per request. The whole league fits in a few hundred rows. */
 export const loadHistory = cache(async (): Promise<History> => {
-  const [franchises, managers, seasons, teamSeasons, matchups] = await Promise.all([
+  const [franchises, managers, seasons, teamSeasons, matchups, awards] = await Promise.all([
     fetchAll<Franchise>("franchises"),
     fetchAll<Manager>("managers"),
     supabase.from("seasons").select("*").order("year").then(({ data, error }) => {
@@ -72,6 +75,7 @@ export const loadHistory = cache(async (): Promise<History> => {
     }),
     fetchAll<TeamSeason>("team_seasons"),
     fetchAll<Matchup>("matchups"),
+    fetchAll<Award>("awards"),
   ]);
   return {
     franchises,
@@ -79,6 +83,7 @@ export const loadHistory = cache(async (): Promise<History> => {
     seasons,
     teamSeasons,
     matchups,
+    awards: awards.sort((a, b) => b.year - a.year || a.name.localeCompare(b.name)),
     franchiseById: new Map(franchises.map((f) => [f.id, f])),
     teamSeason: new Map(teamSeasons.map((t) => [`${t.year}:${t.franchise_id}`, t])),
   };

@@ -343,6 +343,8 @@ def write(team_seasons, by_year, matchups, seeds, fr: Franchises):
                  m["home_w"], m["home_l"], m["home_t"], Jsonb(m["home_stats"]), Jsonb(m["away_stats"]),
                  fid[m["winner"]]),
             )
+        # Corrections made on the website survive re-imports.
+        conn.execute("select apply_record_overrides()")
 
 
 def main() -> int:

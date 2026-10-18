@@ -96,6 +96,34 @@ export default async function HistoryPage() {
         ))}
       </div>
 
+      {h.awards.length > 0 && (
+        <>
+          <SectionTitle kicker="Hardware">Awards</SectionTitle>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[...new Set(h.awards.map((a) => a.name))].map((award) => (
+              <Card key={award}>
+                <p className="border-b border-line px-4 py-2 font-display text-sm font-bold uppercase tracking-wider text-gold">{award}</p>
+                <ul className="divide-y divide-line text-sm">
+                  {h.awards.filter((a) => a.name === award).map((a) => {
+                    const team = a.franchise_id ? h.teamSeason.get(`${a.year}:${a.franchise_id}`)?.team_name ?? h.franchiseById.get(a.franchise_id)?.name : null;
+                    return (
+                      <li key={a.id} className="flex gap-3 px-4 py-2">
+                        <span className="w-10 font-display font-bold num">{a.year}</span>
+                        <span className="min-w-0 flex-1">
+                          {a.franchise_id && team ? <TeamLink slug={h.franchiseById.get(a.franchise_id)!.slug}>{team}</TeamLink> : null}
+                          {a.recipient && <span className={team ? "text-mute" : ""}>{team ? " · " : ""}{a.recipient}</span>}
+                          {a.note && <span className="block text-xs text-mute">{a.note}</span>}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
       <SectionTitle kicker="Since 2007">All-time standings</SectionTitle>
       <Card className="table-scroll">
         <table className="w-full min-w-[640px] text-sm">

@@ -21,6 +21,8 @@ const NAV = [
   { href: "/teams", label: "Teams" },
   { href: "/history", label: "History" },
   { href: "/records", label: "Records" },
+  { href: "/news", label: "News" },
+  { href: "/rules", label: "Rules" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -53,7 +55,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="mx-auto max-w-6xl px-4 pb-16 pt-6">{children}</main>
         <footer className="border-t border-line py-6 text-center text-xs text-mute">
-          League of Dreams · est. 2007
+          League of Dreams · est. 2007 ·{" "}
+          <Link href="/login" className="hover:text-chalk">Commissioner</Link>
         </footer>
       </body>
     </html>

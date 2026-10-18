@@ -239,6 +239,7 @@ class Sync:
         if not has_sheet_standings:
             self._standings(year, reg, mapping, playoff_tree, replay_week, league_id, team_cell)
             summary += ", standings"
+        self.conn.execute("select apply_record_overrides()")  # corrections made on the website
         return summary
 
     @staticmethod

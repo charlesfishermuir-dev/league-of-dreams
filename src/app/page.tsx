@@ -3,6 +3,7 @@ import { Card, SectionTitle, TeamLink } from "@/components/ui";
 import { MatchupCard, TeamLogo, UpdatedLine } from "@/components/live";
 import { champions, fmtRecord, managerTotals } from "@/lib/history";
 import { fmtDateRange, fmtDay, loadCurrentSeason, loadRecentTransactions } from "@/lib/live";
+import { excerpt, fmtNewsDate, loadNews, NEWS_KINDS } from "@/lib/news";
 
 export const revalidate = 60;
 
@@ -13,7 +14,10 @@ export default async function Home() {
   const games = cur.matchups.filter((m) => m.period === currentPeriod);
   const isLive = games.some((m) => m.status === "live");
   const seasonOver = !isLive && currentPeriod === periods.at(-1)?.period && games.every((m) => m.status === "final");
-  const txGroups = (await loadRecentTransactions(40)).slice(0, 8);
+  const [txGroups, news] = await Promise.all([
+    loadRecentTransactions(40).then((g) => g.slice(0, 8)),
+    loadNews(3),
+  ]);
 
   const champs = champions(h).filter((c) => c.champion);
   const latest = champs.at(-1)!;
@@ -86,6 +90,26 @@ export default async function Home() {
           <span className="text-5xl" aria-hidden>🏆</span>
         </div>
       </Card>
+
+      {news.length > 0 && (
+        <section className="mb-8">
+          <SectionTitle kicker="From the commissioner">Latest news</SectionTitle>
+          <div className="grid gap-3 md:grid-cols-3">
+            {news.map((p) => (
+              <Link key={p.id} href={`/news/${p.slug}`} className="group">
+                <Card className="h-full p-4 transition group-hover:border-red">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red">
+                    {NEWS_KINDS[p.kind]} · <span className="text-mute">{fmtNewsDate(p.published_at)}</span>
+                  </p>
+                  <p className="mt-1 font-display text-xl font-bold uppercase leading-tight">{p.title}</p>
+                  {excerpt(p.body, 120) && <p className="mt-1 text-sm text-mute">{excerpt(p.body, 120)}</p>}
+                </Card>
+              </Link>
+            ))}
+          </div>
+          <Link href="/news" className="mt-2 inline-block text-sm font-semibold text-red hover:underline">All news →</Link>
+        </section>
+      )}
 
       <div className="grid gap-8 md:grid-cols-2">
         <section>
