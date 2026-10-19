@@ -16,7 +16,8 @@
     "react-dom": "19.1.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -24,6 +25,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.169.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "tailwindcss": "^4",

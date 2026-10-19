@@ -5,6 +5,7 @@ import { champions, fmtRecord, managerTotals } from "@/lib/history";
 import { fmtDateRange, fmtDay, loadCurrentSeason, loadRecentTransactions } from "@/lib/live";
 import { excerpt, fmtNewsDate, loadNews, NEWS_KINDS } from "@/lib/news";
 import { LotteryCountdown } from "@/components/lottery-countdown";
+import { Trophy } from "@/components/trophy";
 import { loadLotterySchedule } from "@/lib/draft";
 
 export const revalidate = 60;
@@ -81,25 +82,33 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Reigning champion */}
-      <Card className="relative my-8 overflow-hidden">
-        <div className="absolute inset-y-0 left-0 w-1.5 bg-gold" aria-hidden />
-        <div className="flex flex-wrap items-center justify-between gap-4 p-5 pl-6">
-          <div className="flex items-center gap-4">
-            <TeamLogo url={logo.get(latest.champion!.franchise_id)} name={latest.champion!.team_name} size={56} />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{latest.season.year} Champion</p>
-              <p className="font-display text-3xl font-bold uppercase leading-tight">
-                <TeamLink slug={slug(latest.champion!.franchise_id)}>{latest.champion!.team_name}</TeamLink>
-              </p>
-              <p className="text-sm text-mute">
-                {latest.champion!.manager_label} · {fmtRecord(latest.champion!.wins, latest.champion!.losses, latest.champion!.ties)} regular season
-              </p>
-            </div>
+      {/* The trophy */}
+      <section className="relative my-8 overflow-hidden rounded-xl border border-line bg-[radial-gradient(ellipse_at_50%_35%,#24356f_0%,#0d1638_55%,#070c1f_100%)]">
+        <div className="grid items-center md:grid-cols-[1.3fr_1fr]">
+          <div className="h-[440px] sm:h-[540px]">
+            <Trophy champions={champs.map((c) => ({ year: c.season.year, team: c.champion!.team_name }))} />
           </div>
-          <span className="text-5xl" aria-hidden>🏆</span>
+          <div className="border-t border-line/60 p-5 md:border-l md:border-t-0 md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">The League of Dreams Trophy</p>
+            <p className="mt-1 text-sm text-mute">
+              Every champion since {champs[0].season.year}, engraved on the barrel. Drag to spin it.
+            </p>
+            <div className="mt-6 flex items-center gap-4">
+              <TeamLogo url={logo.get(latest.champion!.franchise_id)} name={latest.champion!.team_name} size={56} />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{latest.season.year} Champion</p>
+                <p className="font-display text-3xl font-bold uppercase leading-tight">
+                  <TeamLink slug={slug(latest.champion!.franchise_id)}>{latest.champion!.team_name}</TeamLink>
+                </p>
+                <p className="text-sm text-mute">
+                  {latest.champion!.manager_label} · {fmtRecord(latest.champion!.wins, latest.champion!.losses, latest.champion!.ties)} regular season
+                </p>
+              </div>
+            </div>
+            <Link href="/history" className="mt-6 inline-block text-sm font-semibold text-red hover:underline">All champions →</Link>
+          </div>
         </div>
-      </Card>
+      </section>
 
       {news.length > 0 && (
         <section className="mb-8">
