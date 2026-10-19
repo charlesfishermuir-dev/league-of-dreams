@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 export type Engraving = { year: number; team: string };
-/** A player celebrating beside the trophy: jersey name, number, and how they celebrate. */
-export type Celebrant = { name: string; number: number; dance: "shuffle" | "jump" };
+/** A player whose photo rises beside the trophy when someone taps to celebrate. */
+export type Star = { name: string; photo: string };
 
 /*
  * The League of Dreams trophy: a gold cup on a silver barrel whose plates carry
@@ -12,8 +12,10 @@ export type Celebrant = { name: string; number: number; dance: "shuffle" | "jump
  * so it never slows the server render. Drag sideways to spin it; vertical drags
  * still scroll the page on phones.
  */
-export function Trophy({ champions, celebrants = [] }: { champions: Engraving[]; celebrants?: Celebrant[] }) {
+export function Trophy({ champions, stars = [] }: { champions: Engraving[]; stars?: Star[] }) {
   const mount = useRef<HTMLDivElement>(null);
+  const celebrateRef = useRef<(() => void) | null>(null);
+  const [party, setParty] = useState(false);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
 
   useEffect(() => {
@@ -248,106 +250,8 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
       shadowMesh.position.y = 0.001;
       scene.add(shadowMesh);
 
-      // ---- Celebrating players, one each side of the trophy (cartoon figures built from simple shapes) ----
-      const jerseyWhite = keep(new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.7 }));
-      const navy = keep(new THREE.MeshStandardMaterial({ color: 0x1d2d6b, roughness: 0.55 }));
-      const red = keep(new THREE.MeshStandardMaterial({ color: 0xc8102e, roughness: 0.5 }));
-      const skin = keep(new THREE.MeshStandardMaterial({ color: 0x8a5a3c, roughness: 0.6 }));
-      const black = keep(new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 }));
-      const wood = keep(new THREE.MeshStandardMaterial({ color: 0xc89a5b, roughness: 0.45 }));
-      type Player = { root: import("three").Group; body: import("three").Group; legs: import("three").Group[]; arms: import("three").Group[]; dance: Celebrant["dance"]; side: number };
-      const players: Player[] = [];
-      const part = (geo: import("three").BufferGeometry, mat: import("three").Material, parent: import("three").Object3D, x = 0, y = 0, z = 0) => {
-        const m = new THREE.Mesh(keep(geo), mat);
-        m.position.set(x, y, z);
-        parent.add(m);
-        return m;
-      };
-      celebrants.slice(0, 2).forEach((c, i) => {
-        const side = i === 0 ? -1 : 1;
-        const root = new THREE.Group();
-        const body = new THREE.Group(); // everything above the hips moves together
-        root.add(body);
-        // Jersey with the name and number across the chest.
-        const jersey = document.createElement("canvas");
-        jersey.width = 1024;
-        jersey.height = 512;
-        const jc = jersey.getContext("2d")!;
-        jc.fillStyle = "#f2f2ee";
-        jc.fillRect(0, 0, 1024, 512);
-        jc.fillStyle = "rgba(29,45,107,0.18)"; // pinstripes
-        for (let x = 0; x < 1024; x += 28) jc.fillRect(x, 0, 4, 512);
-        jc.textAlign = "center";
-        jc.textBaseline = "middle";
-        // The capsule stretches the texture vertically, so letters are drawn squashed to come out right.
-        const squashed = (text: string, y: number, color: string) => {
-          jc.save();
-          jc.translate(512, y);
-          jc.scale(1, 0.58);
-          jc.fillStyle = color;
-          jc.fillText(text, 0, 0);
-          jc.restore();
-        };
-        fit(jc, c.name.toUpperCase(), 700, 70, 300);
-        squashed(c.name.toUpperCase(), 205, "#1d2d6b");
-        jc.font = `700 150px ${fontFamily}`;
-        squashed(String(c.number), 290, "#c8102e");
-        const jerseyMap = keep(new THREE.CanvasTexture(jersey));
-        jerseyMap.colorSpace = THREE.SRGBColorSpace;
-        const torso = part(new THREE.CapsuleGeometry(0.42, 0.62, 8, 32), keep(new THREE.MeshStandardMaterial({ map: jerseyMap, roughness: 0.7 })), body, 0, 1.62);
-        torso.rotation.y = Math.PI; // puts the middle of the texture (the lettering) on the front
-        part(new THREE.CylinderGeometry(0.43, 0.43, 0.1, 32), navy, body, 0, 1.12); // belt
-        // Head, face and cap.
-        part(new THREE.CylinderGeometry(0.13, 0.15, 0.2, 16), skin, body, 0, 2.42);
-        const head = new THREE.Group();
-        head.position.y = 2.75;
-        body.add(head);
-        part(new THREE.SphereGeometry(0.36, 32, 24), skin, head);
-        for (const ex of [-0.12, 0.12]) part(new THREE.SphereGeometry(0.045, 12, 8), black, head, ex, 0.04, 0.32);
-        const smile = part(new THREE.TorusGeometry(0.12, 0.02, 8, 24, Math.PI), black, head, 0, -0.1, 0.31);
-        smile.rotation.z = Math.PI;
-        part(new THREE.SphereGeometry(0.375, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), navy, head, 0, 0.06, 0);
-        const brim = part(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 32, 1, false, -Math.PI / 2, Math.PI), red, head, 0, 0.08, 0.28);
-        brim.scale.set(1, 1, 0.9);
-        part(new THREE.SphereGeometry(0.05, 12, 8), red, head, 0, 0.43, 0); // button
-        // Arms hang from shoulder pivots so they can wave.
-        const arms = [-1, 1].map((s) => {
-          const shoulder = new THREE.Group();
-          shoulder.position.set(s * 0.52, 2.05, 0);
-          body.add(shoulder);
-          part(new THREE.CapsuleGeometry(0.13, 0.5, 6, 16), jerseyWhite, shoulder, 0, -0.38);
-          part(new THREE.SphereGeometry(0.13, 16, 12), skin, shoulder, 0, -0.78);
-          return shoulder;
-        });
-        if (c.dance === "shuffle") {
-          // Bat in the outside hand, held up when the arm is raised.
-          const bat = part(new THREE.CylinderGeometry(0.075, 0.03, 1.25, 16), wood, arms[side === -1 ? 0 : 1], 0, -1.3);
-          bat.rotation.z = 0.1;
-        }
-        // Legs from hip pivots.
-        const legs = [-1, 1].map((s) => {
-          const hip = new THREE.Group();
-          hip.position.set(s * 0.2, 1.1, 0);
-          root.add(hip);
-          part(new THREE.CapsuleGeometry(0.17, 0.62, 6, 16), jerseyWhite, hip, 0, -0.45);
-          part(new THREE.CylinderGeometry(0.17, 0.15, 0.22, 16), navy, hip, 0, -0.85); // socks
-          part(new THREE.BoxGeometry(0.28, 0.16, 0.46), black, hip, 0, -1.0, 0.08); // cleats
-          return hip;
-        });
-        root.scale.setScalar(1.12);
-        root.position.set(side * 2.6, 0, 0.9);
-        root.rotation.y = -side * 0.35; // turned a little toward the trophy
-        scene.add(root);
-        const shade = new THREE.Mesh(shadowMesh.geometry, shadowMesh.material);
-        shade.rotation.x = -Math.PI / 2;
-        shade.scale.setScalar(0.45);
-        shade.position.set(side * 2.6, 0.002, 0.9);
-        scene.add(shade);
-        players.push({ root, body, legs, arms, dance: c.dance, side });
-      });
-
       // Confetti in the league colours.
-      const CONFETTI = celebrants.length && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 240 : 0;
+      const CONFETTI = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 160;
       const confetti = new THREE.InstancedMesh(
         keep(new THREE.PlaneGeometry(0.09, 0.15)),
         keep(new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.4, metalness: 0.3 })),
@@ -364,33 +268,7 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
       });
       scene.add(confetti);
       const dummy = new THREE.Object3D();
-      const animatePlayers = (t: number) => {
-        for (const p of players) {
-          const [l, r] = p.arms;
-          if (p.dance === "shuffle") {
-            // Side-to-side shuffle, bat pumped overhead.
-            const step = Math.sin(t * 7);
-            p.root.position.x = p.side * 2.6 + step * 0.12;
-            p.root.position.y = Math.abs(Math.cos(t * 7)) * 0.08;
-            p.legs[0].rotation.z = -0.15 + step * 0.18;
-            p.legs[1].rotation.z = 0.15 + step * 0.18;
-            p.body.rotation.z = -step * 0.06;
-            const pump = 2.6 + Math.sin(t * 7) * 0.25;
-            const batArm = p.side === -1 ? l : r, other = p.side === -1 ? r : l;
-            batArm.rotation.z = -p.side * pump;
-            other.rotation.z = p.side * (0.5 + Math.sin(t * 3.5) * 0.3);
-            other.rotation.x = -0.8;
-          } else {
-            // Jumping with both arms up, and a full spin every few jumps.
-            const hop = Math.abs(Math.sin(t * 4.2));
-            p.root.position.y = hop * 0.55;
-            p.legs.forEach((leg) => (leg.rotation.x = -(1 - hop) * 0.1 - hop * 0.35));
-            l.rotation.z = -2.7 - Math.sin(t * 8.4) * 0.2;
-            r.rotation.z = 2.7 + Math.sin(t * 8.4) * 0.2;
-            const cycle = (t % 6) / 6;
-            p.root.rotation.y = -p.side * 0.35 + (cycle > 0.8 ? ((cycle - 0.8) / 0.2) * Math.PI * 2 : 0);
-          }
-        }
+      const animateConfetti = (t: number) => {
         for (let i = 0; i < CONFETTI; i++) {
           const b = bits[i];
           b.y -= b.fall;
@@ -403,6 +281,122 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
         confetti.instanceMatrix.needsUpdate = true;
       };
 
+      // ---- Tap to celebrate: fireworks over the trophy and confetti cannons from both sides ----
+      const glow = document.createElement("canvas");
+      glow.width = glow.height = 64;
+      const gx = glow.getContext("2d")!;
+      const gg = gx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gg.addColorStop(0, "rgba(255,255,255,1)");
+      gg.addColorStop(0.3, "rgba(255,255,255,0.8)");
+      gg.addColorStop(1, "rgba(255,255,255,0)");
+      gx.fillStyle = gg;
+      gx.fillRect(0, 0, 64, 64);
+      const SPARKS = 1600;
+      const sparkPos = new Float32Array(SPARKS * 3), sparkCol = new Float32Array(SPARKS * 3);
+      const sparkVel = new Float32Array(SPARKS * 3), sparkLife = new Float32Array(SPARKS), sparkBase = new Float32Array(SPARKS * 3);
+      const sparkGeo = keep(new THREE.BufferGeometry());
+      sparkGeo.setAttribute("position", new THREE.BufferAttribute(sparkPos, 3));
+      sparkGeo.setAttribute("color", new THREE.BufferAttribute(sparkCol, 3));
+      const sparks = new THREE.Points(sparkGeo, keep(new THREE.PointsMaterial({
+        size: 0.2, map: keep(new THREE.CanvasTexture(glow)), vertexColors: true, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      })));
+      sparks.frustumCulled = false;
+      scene.add(sparks);
+      const flash = new THREE.PointLight(0xffffff, 0, 12);
+      scene.add(flash);
+      let nextSpark = 0;
+      const shellColors = [0xf5c518, 0xc8102e, 0xffffff, 0x4f7bff, 0x37d67a, 0xff8a1f];
+      const shell = () => {
+        const cx = (Math.random() - 0.5) * 7, cy = 5 + Math.random() * 2.6, cz = -1.5 + Math.random();
+        const color = new THREE.Color(shellColors[Math.floor(Math.random() * shellColors.length)]);
+        const color2 = Math.random() < 0.4 ? new THREE.Color(0xffffff) : color;
+        const speed = 0.075 + Math.random() * 0.04;
+        for (let k = 0; k < 200; k++) {
+          const i = nextSpark;
+          nextSpark = (nextSpark + 1) % SPARKS;
+          // Even spread over a sphere.
+          const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+          const v = speed * (0.85 + Math.random() * 0.3);
+          sparkPos.set([cx, cy, cz], i * 3);
+          sparkVel.set([r * Math.cos(th) * v, u * v, r * Math.sin(th) * v], i * 3);
+          const c = k % 3 === 0 ? color2 : color;
+          sparkBase.set([c.r, c.g, c.b], i * 3);
+          sparkLife[i] = 1;
+        }
+        flash.color = color;
+        flash.position.set(cx, cy, cz + 2);
+        flash.intensity = 40;
+      };
+      // Confetti cannons: a second batch shot up from each player's spot.
+      const BLAST = 360;
+      const blast = new THREE.InstancedMesh(confetti.geometry, confetti.material, BLAST);
+      blast.count = 0;
+      const blastBits = Array.from({ length: BLAST }, (_, i) => {
+        blast.setColorAt(i, new THREE.Color(palette[i % palette.length]));
+        return { p: new THREE.Vector3(), v: new THREE.Vector3(), spin: new THREE.Vector3(Math.random(), Math.random(), Math.random()), alive: false };
+      });
+      blast.frustumCulled = false;
+      scene.add(blast);
+      const timers: number[] = [];
+      let partyTimer = 0;
+      const celebrate = () => {
+        setParty(true);
+        window.clearTimeout(partyTimer);
+        partyTimer = window.setTimeout(() => setParty(false), 4500);
+        blastBits.forEach((b, i) => {
+          const side = i % 2 ? 1 : -1;
+          b.p.set(side * 2.4, 0.4, 0.9);
+          b.v.set(-side * (0.02 + Math.random() * 0.06), 0.15 + Math.random() * 0.1, (Math.random() - 0.3) * 0.06);
+          b.alive = true;
+        });
+        blast.count = BLAST;
+        [0, 350, 700, 1000, 1400, 1700, 2200].forEach((ms) => timers.push(window.setTimeout(shell, ms)));
+      };
+      celebrateRef.current = celebrate;
+      const animateEffects = (t: number) => {
+        let any = false;
+        for (let i = 0; i < SPARKS; i++) {
+          if (sparkLife[i] <= 0) continue;
+          any = true;
+          const j = i * 3;
+          sparkVel[j] *= 0.975;
+          sparkVel[j + 1] = sparkVel[j + 1] * 0.975 - 0.0012;
+          sparkVel[j + 2] *= 0.975;
+          sparkPos[j] += sparkVel[j];
+          sparkPos[j + 1] += sparkVel[j + 1];
+          sparkPos[j + 2] += sparkVel[j + 2];
+          sparkLife[i] -= 0.011;
+          const fade = Math.max(0, sparkLife[i]) * (0.75 + Math.random() * 0.25); // a little twinkle
+          sparkCol[j] = sparkBase[j] * fade;
+          sparkCol[j + 1] = sparkBase[j + 1] * fade;
+          sparkCol[j + 2] = sparkBase[j + 2] * fade;
+        }
+        if (any) {
+          sparkGeo.attributes.position.needsUpdate = true;
+          sparkGeo.attributes.color.needsUpdate = true;
+        }
+        flash.intensity *= 0.88;
+        if (blast.count) {
+          let alive = 0;
+          blastBits.forEach((b, i) => {
+            if (b.alive) {
+              b.v.multiplyScalar(0.985);
+              b.v.y -= 0.0022;
+              b.p.add(b.v);
+              if (b.p.y < -0.2) b.alive = false;
+              else alive++;
+            }
+            dummy.position.copy(b.alive ? b.p : new THREE.Vector3(0, -50, 0));
+            dummy.rotation.set(t * 4 * b.spin.x, t * 4 * b.spin.y, t * 4 * b.spin.z);
+            dummy.updateMatrix();
+            blast.setMatrixAt(i, dummy.matrix);
+          });
+          blast.instanceMatrix.needsUpdate = true;
+          if (!alive) blast.count = 0;
+        }
+      };
+
       // Start with the newest champion facing front. Plate column c sits at angle (c + 0.5) / COLS around the barrel.
       const latestIdx = champions.length - 1;
       let angle = latestIdx >= 0 ? -2 * Math.PI * ((Math.floor(latestIdx / ROWS) + 0.5) / COLS) : 0;
@@ -412,11 +406,12 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
       const idleSpin = reduceMotion ? 0 : 0.0025;
 
       // Drag to spin.
-      let dragging = false, lastX = 0, lastT = 0, idleAfter = 0;
+      let dragging = false, lastX = 0, lastT = 0, idleAfter = 0, startX = 0, startT = 0;
       const canvas = renderer.domElement;
       const down = (e: PointerEvent) => {
         dragging = true;
-        lastX = e.clientX;
+        lastX = startX = e.clientX;
+        startT = performance.now();
         lastT = performance.now();
         velocity = 0;
         canvas.style.cursor = "grabbing";
@@ -429,9 +424,10 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
         lastX = e.clientX;
         lastT = now;
       };
-      const up = () => {
+      const up = (e: PointerEvent) => {
         if (!dragging) return;
         dragging = false;
+        if (e.type === "pointerup" && Math.abs(e.clientX - startX) < 8 && performance.now() - startT < 500) celebrate();
         idleAfter = performance.now() + 2500;
         canvas.style.cursor = "grab";
       };
@@ -444,8 +440,8 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
         const w = el.clientWidth, h = el.clientHeight;
         renderer.setSize(w, h);
         camera.aspect = w / h;
-        // Back the camera off until everything fits: the trophy's height, and its width plus any players.
-        const halfWidth = celebrants.length ? 4.5 : 1.8, tan = Math.tan((camera.fov / 2) * (Math.PI / 180));
+        // Back the camera off on narrow screens so the whole trophy fits.
+        const halfWidth = 2.2, tan = Math.tan((camera.fov / 2) * (Math.PI / 180));
         camera.position.z = Math.max(12.5, halfWidth / ((w / h) * tan));
         camera.updateProjectionMatrix();
       };
@@ -468,7 +464,9 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
           if (Math.abs(velocity) < 0.0004 && performance.now() > idleAfter) angle += idleSpin;
         }
         trophy.rotation.y = angle;
-        animatePlayers(reduceMotion ? 0.3 : performance.now() / 1000);
+        const now = performance.now() / 1000;
+        animateConfetti(now);
+        animateEffects(now);
         renderer.render(scene, camera);
         if (visible) frame = requestAnimationFrame(tick);
       }
@@ -477,6 +475,9 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
 
       cleanup = () => {
         cancelAnimationFrame(frame);
+        timers.forEach((id) => clearTimeout(id));
+        clearTimeout(partyTimer);
+        celebrateRef.current = null;
         io.disconnect();
         ro.disconnect();
         canvas.removeEventListener("pointerdown", down);
@@ -493,16 +494,41 @@ export function Trophy({ champions, celebrants = [] }: { champions: Engraving[];
       disposed = true;
       cleanup();
     };
-  }, [champions, celebrants]);
+  }, [champions]);
 
   return (
     <div className="relative h-full w-full">
       <div ref={mount} className="absolute inset-0" role="img"
-        aria-label={`The League of Dreams trophy, engraved with every champion${celebrants.length ? `, with ${celebrants.map((c) => c.name).join(" and ")} celebrating beside it` : ""}`} />
+        aria-label="The League of Dreams trophy, engraved with every champion" />
+      {/* Tap to celebrate: the stars' photos rise up on either side of the trophy. */}
+      {stars.slice(0, 2).map((p, i) => (
+        <div
+          key={p.name}
+          aria-hidden
+          className={`pointer-events-none absolute bottom-0 w-[38%] max-w-[260px] transition-all duration-700 ease-out ${i === 0 ? "left-0" : "right-0"} ${
+            party ? "translate-y-0 opacity-100" : "translate-y-1/2 opacity-0"
+          }`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.photo} alt="" className="w-full drop-shadow-[0_0_24px_rgba(245,197,24,0.55)]" />
+          <p className="absolute inset-x-0 bottom-2 text-center font-display text-lg font-bold uppercase tracking-wide text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.9)]">
+            {p.name}
+          </p>
+        </div>
+      ))}
       {state !== "ready" && (
         <div className="absolute inset-0 flex items-center justify-center text-7xl" aria-hidden>
           {state === "loading" ? <span className="animate-pulse">🏆</span> : "🏆"}
         </div>
+      )}
+      {state === "ready" && (
+        <button
+          type="button"
+          onClick={() => celebrateRef.current?.()}
+          className="absolute left-3 top-3 rounded-full border border-gold/40 bg-ink/70 px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wider text-gold backdrop-blur hover:bg-gold hover:text-ink"
+        >
+          🎆 Tap to celebrate
+        </button>
       )}
       <ul className="sr-only">
         {champions.map((c) => <li key={c.year}>{c.year}: {c.team}</li>)}

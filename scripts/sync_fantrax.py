@@ -415,19 +415,23 @@ class Sync:
         batch = []
         for fid, tables in fetched.items():
             for table in tables:
+                # Stat columns (hitters' and pitchers' tables differ); the first two are age and next opponent.
+                heads = [h.get("shortName") or h.get("name") for h in table.get("header", {}).get("cells", [])]
                 for row in table.get("rows", []):
                     p = row.get("scorer")
                     if not p:
                         continue
                     status = ROSTER_STATUS.get(str(row.get("statusId")), "other")
                     slot = positions.get(row.get("posId"), "") if status == "active" else {"reserve": "BN", "injured": "IL", "minors": "MiLB"}.get(status, "")
+                    stats = {h: c.get("content") for h, c in zip(heads, row.get("cells", []))
+                             if h and h not in ("Age", "Opp") and c.get("content") not in (None, "", "-")}
                     batch.append((year, fid, need(p, "scorerId"), need(p, "name"), p.get("posShortNames"), slot, status,
-                                  p.get("teamShortName"), p.get("headshotUrl")))
+                                  p.get("teamShortName"), p.get("headshotUrl"), Jsonb(stats)))
         self.conn.execute("delete from rosters where year = %s", (year,))
         with self.conn.cursor() as cur:
             cur.executemany(
-                """insert into rosters (year, franchise_id, player_id, name, positions, slot, status, mlb_team, headshot_url)
-                   values (%s, %s, %s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", batch)
+                """insert into rosters (year, franchise_id, player_id, name, positions, slot, status, mlb_team, headshot_url, stats)
+                   values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) on conflict do nothing""", batch)
         return f"{len(batch)} players on {len(fetched)} teams"
 
     def transactions(self, year: int, league_id: str, everything: bool):

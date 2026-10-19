@@ -20,6 +20,7 @@ export type RosterPlayer = {
   status: "active" | "reserve" | "injured" | "minors" | "other";
   mlb_team: string | null;
   headshot_url: string | null;
+  stats: Record<string, string>; // season stats as shown on Fantrax, e.g. { HR: "27", AVG: ".275" }
 };
 export type Transaction = {
   id: number;
@@ -70,6 +71,14 @@ export async function loadRoster(year: number, franchiseId: number) {
   return rows<RosterPlayer>(
     supabase.from("rosters").select("*").eq("year", year).eq("franchise_id", franchiseId).order("id"), "roster");
 }
+
+/** Specific players on this season's rosters, by name (for spotlights). */
+export async function loadPlayersByName(year: number, names: string[]) {
+  return rows<RosterPlayer>(supabase.from("rosters").select("*").eq("year", year).in("name", names), "players");
+}
+
+/** Fantrax's large headshot (the roster gives the 96px one). */
+export const bigHeadshot = (url: string) => url.replace(/_96_/, "_400_");
 
 /** The most recent transactions, grouped so a claim and its drop show together. */
 export async function loadRecentTransactions(limit = 40) {

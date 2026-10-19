@@ -2,19 +2,20 @@ import Link from "next/link";
 import { Card, SectionTitle, TeamLink } from "@/components/ui";
 import { MatchupCard, TeamLogo, UpdatedLine } from "@/components/live";
 import { champions, fmtRecord, managerTotals } from "@/lib/history";
-import { fmtDateRange, fmtDay, loadCurrentSeason, loadRecentTransactions } from "@/lib/live";
+import { bigHeadshot, fmtDateRange, fmtDay, loadCurrentSeason, loadPlayersByName, loadRecentTransactions } from "@/lib/live";
 import { excerpt, fmtNewsDate, loadNews, NEWS_KINDS } from "@/lib/news";
 import { LotteryCountdown } from "@/components/lottery-countdown";
-import { Trophy, type Celebrant } from "@/components/trophy";
+import { Trophy } from "@/components/trophy";
 import { loadLotterySchedule } from "@/lib/draft";
 
 export const revalidate = 60;
 
-// Celebrating beside the trophy: the 2026 champion Birmingham Vulcans' stars.
-const CELEBRANTS: Celebrant[] = [
-  { name: "Soto", number: 22, dance: "shuffle" },
-  { name: "Rodríguez", number: 44, dance: "jump" },
+// The champions' stars in the spotlight beside the trophy (names as Fantrax spells them, then as shown here).
+const SPOTLIGHT: [string, string][] = [
+  ["Juan Soto", "Juan Soto"],
+  ["Julio Rodriguez", "Julio Rodríguez"],
 ];
+const SPOTLIGHT_STATS = ["HR", "RBI", "R", "SB", "AVG", "OPS"];
 
 export default async function Home() {
   const cur = await loadCurrentSeason();
@@ -23,11 +24,16 @@ export default async function Home() {
   const games = cur.matchups.filter((m) => m.period === currentPeriod);
   const isLive = games.some((m) => m.status === "live");
   const seasonOver = !isLive && currentPeriod === periods.at(-1)?.period && games.every((m) => m.status === "final");
-  const [txGroups, news, lottery] = await Promise.all([
+  const [txGroups, news, lottery, spotlightRows] = await Promise.all([
     loadRecentTransactions(40).then((g) => g.slice(0, 8)),
     loadNews(3),
     loadLotterySchedule(season.year + 1),
+    loadPlayersByName(season.year, SPOTLIGHT.map(([name]) => name)),
   ]);
+  const spotlight = SPOTLIGHT.flatMap(([name, display]) => {
+    const p = spotlightRows.find((r) => r.name === name);
+    return p ? [{ ...p, display, photo: p.headshot_url ? bigHeadshot(p.headshot_url) : null }] : [];
+  });
   const lotterySoon = lottery?.status === "scheduled" && new Date(lottery.run_at).getTime() - Date.now() < 7 * 86_400_000;
 
   const champs = champions(h).filter((c) => c.champion);
@@ -92,13 +98,12 @@ export default async function Home() {
       <section className="relative my-8 overflow-hidden rounded-xl border border-line bg-[radial-gradient(ellipse_at_50%_35%,#24356f_0%,#0d1638_55%,#070c1f_100%)]">
         <div className="grid items-center md:grid-cols-[1.6fr_1fr]">
           <div className="h-[440px] sm:h-[540px]">
-            <Trophy champions={champs.map((c) => ({ year: c.season.year, team: c.champion!.team_name }))} celebrants={CELEBRANTS} />
+            <Trophy champions={champs.map((c) => ({ year: c.season.year, team: c.champion!.team_name }))} stars={spotlight.flatMap((p) => (p.photo ? [{ name: p.display, photo: p.photo }] : []))} />
           </div>
           <div className="border-t border-line/60 p-5 md:border-l md:border-t-0 md:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">The League of Dreams Trophy</p>
             <p className="mt-1 text-sm text-mute">
-              Every champion since {champs[0].season.year}, engraved on the barrel. Drag to spin it.
-              Celebrating with it: Vulcans stars Juan Soto and Julio Rodríguez.
+              Every champion since {champs[0].season.year}, engraved on the barrel. Drag to spin it, or tap it to celebrate.
             </p>
             <div className="mt-6 flex items-center gap-4">
               <TeamLogo url={logo.get(latest.champion!.franchise_id)} name={latest.champion!.team_name} size={56} />
@@ -112,6 +117,37 @@ export default async function Home() {
                 </p>
               </div>
             </div>
+            {spotlight.length > 0 && (
+              <div className="mt-6">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">Champions spotlight</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {spotlight.map((p) => (
+                    <div key={p.player_id} className="overflow-hidden rounded-lg border border-line bg-navy-900/80">
+                      <div className="relative h-28 overflow-hidden bg-gradient-to-br from-navy-600 via-navy-800 to-ink">
+                        <div className="absolute -right-6 top-0 h-full w-16 skew-x-[-18deg] bg-red/80" aria-hidden />
+                        {p.photo && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.photo} alt={p.display} className="absolute bottom-0 left-1/2 h-28 w-28 -translate-x-1/2 object-contain object-bottom" />
+                        )}
+                      </div>
+                      <div className="p-2.5">
+                        <p className="truncate font-display text-base font-bold uppercase leading-tight">{p.display}</p>
+                        <p className="text-[11px] text-mute">{[p.positions, p.mlb_team].filter(Boolean).join(" · ")}</p>
+                        <dl className="mt-2 grid grid-cols-3 gap-x-1 gap-y-1.5 text-center">
+                          {SPOTLIGHT_STATS.filter((k) => p.stats?.[k]).map((k) => (
+                            <div key={k}>
+                              <dt className="text-[10px] font-semibold uppercase tracking-wider text-mute">{k}</dt>
+                              <dd className="font-display text-sm font-bold num">{p.stats[k]}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-mute">{season.year} season stats from Fantrax.</p>
+              </div>
+            )}
             <Link href="/history" className="mt-6 inline-block text-sm font-semibold text-red hover:underline">All champions →</Link>
           </div>
         </div>
