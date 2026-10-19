@@ -161,15 +161,17 @@ export function Trophy({ champions }: { champions: Engraving[] }) {
       // League name band on the upper tier.
       const band = document.createElement("canvas");
       band.width = 2048;
-      band.height = 128;
+      band.height = 92; // matches the band's shape, so letters aren't stretched
       const bx = band.getContext("2d")!;
       bx.fillStyle = "#0b0f1e";
-      bx.fillRect(0, 0, 2048, 128);
-      bx.font = `700 64px ${fontFamily}`;
+      bx.fillRect(0, 0, 2048, 92);
       bx.textAlign = "center";
       bx.textBaseline = "middle";
       bx.fillStyle = "#e9c04f";
-      for (let i = 0; i < 2; i++) bx.fillText("LEAGUE OF DREAMS  ★  CHAMPIONS  ★  EST. 2007  ★", 512 + i * 1024, 66);
+      // Twice around the band; each copy must fit its half or they overlap where they meet.
+      const motto = "LEAGUE OF DREAMS  ★  CHAMPIONS  ★  EST. 2007  ★";
+      fit(bx, motto, 700, 58, 980);
+      for (let i = 0; i < 2; i++) bx.fillText(motto, 512 + i * 1024, 48);
       const bandMap = keep(new THREE.CanvasTexture(band));
       bandMap.colorSpace = THREE.SRGBColorSpace;
       const bandMat = keep(new THREE.MeshStandardMaterial({ map: bandMap, metalness: 0.5, roughness: 0.3 }));
