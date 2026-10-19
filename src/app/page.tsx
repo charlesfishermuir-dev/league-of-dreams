@@ -5,10 +5,16 @@ import { champions, fmtRecord, managerTotals } from "@/lib/history";
 import { fmtDateRange, fmtDay, loadCurrentSeason, loadRecentTransactions } from "@/lib/live";
 import { excerpt, fmtNewsDate, loadNews, NEWS_KINDS } from "@/lib/news";
 import { LotteryCountdown } from "@/components/lottery-countdown";
-import { Trophy } from "@/components/trophy";
+import { Trophy, type Celebrant } from "@/components/trophy";
 import { loadLotterySchedule } from "@/lib/draft";
 
 export const revalidate = 60;
+
+// Celebrating beside the trophy: the 2026 champion Birmingham Vulcans' stars.
+const CELEBRANTS: Celebrant[] = [
+  { name: "Soto", number: 22, dance: "shuffle" },
+  { name: "Rodríguez", number: 44, dance: "jump" },
+];
 
 export default async function Home() {
   const cur = await loadCurrentSeason();
@@ -84,14 +90,15 @@ export default async function Home() {
 
       {/* The trophy */}
       <section className="relative my-8 overflow-hidden rounded-xl border border-line bg-[radial-gradient(ellipse_at_50%_35%,#24356f_0%,#0d1638_55%,#070c1f_100%)]">
-        <div className="grid items-center md:grid-cols-[1.3fr_1fr]">
+        <div className="grid items-center md:grid-cols-[1.6fr_1fr]">
           <div className="h-[440px] sm:h-[540px]">
-            <Trophy champions={champs.map((c) => ({ year: c.season.year, team: c.champion!.team_name }))} />
+            <Trophy champions={champs.map((c) => ({ year: c.season.year, team: c.champion!.team_name }))} celebrants={CELEBRANTS} />
           </div>
           <div className="border-t border-line/60 p-5 md:border-l md:border-t-0 md:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">The League of Dreams Trophy</p>
             <p className="mt-1 text-sm text-mute">
               Every champion since {champs[0].season.year}, engraved on the barrel. Drag to spin it.
+              Celebrating with it: Vulcans stars Juan Soto and Julio Rodríguez.
             </p>
             <div className="mt-6 flex items-center gap-4">
               <TeamLogo url={logo.get(latest.champion!.franchise_id)} name={latest.champion!.team_name} size={56} />
